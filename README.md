@@ -1,61 +1,94 @@
-# Makcha - Frontend
+# Makcha - Backend
 
 ## 1. Overview
-카카오톡 로그인 기반으로 사용자가 웹에서 설정/확인할 수 있는 화면을 제공하는 프론트엔드 레포입니다.
-알림은 카카오톡 **알림톡**으로 발송되며, 버튼 클릭 시 본 웹으로 유입됩니다.
+서버가 막차 타이밍을 계산/스케줄링하고, 카카오톡 **알림톡(템플릿)** 을 발송하는 백엔드 레포입니다.
+발송된 메시지는 버튼 클릭을 통해 웹으로 유입되며, 그 이력은 **세이브 리포트**의 근거가 됩니다.
 
 ---
 
-## 2. MVP Screens (권장 라우팅)
-알림톡 버튼 링크 및 주요 화면은 아래 URL 규칙을 기준으로 합니다.
-
-### A. 알림 내역/상세
-- /alerts
-- /alerts/:alertId
-  - 알림 설정 정보(목적지/출발 권장 시각)
-  - 발송된 알림 히스토리(세이브 리포트로 연결 가능)
-
-### B. 경로 확인
-- /alerts/:alertId/route
-  - 출발 시점(T-0)에서 “경로 확인하기” 버튼의 도착지
-
-### C. 첫차 대기 장소
-- /waiting-places?area={AREA_CODE}
-  - 카테고리: 카페/PC방/찜질방
-  - 필터: 가까운순 / 24시간
-  - 상세: 전화하기 / 도보 길찾기
-
-### D. 귀가 확인(클릭 기록)
-- /arrive?alertId={ALERT_ID}&result={public|taxi}
-  - 버튼 클릭 시 결과 저장 후, 간단한 완료 화면 제공(또는 리포트로 리다이렉트)
-
-### E. 카카오T 호출(보조)
-- /taxi?kakaoT=1&from=alert&alertId={ALERT_ID}
-  - 실서비스에서는 카카오T 딥링크/리다이렉트 정책에 따라 처리
+## 2. MVP Responsibilities (Backend)
+1) 사용자 식별(카카오 로그인 기반) 및 기본 사용자 정보 관리
+2) 알림 설정(목적지/출발 권장 시각 등) 저장
+3) 스케줄링:
+   - 설정 완료 즉시(확인 메시지)
+   - 출발 30분 전
+   - 출발 n분 전(10~1분)
+   - 출발 시각(T-0)
+   - (옵션) 첫차 대기 장소 안내
+   - (옵션) 귀가 확인 메시지
+4) 알림톡 발송 연동(템플릿/변수 매핑)
+5) 발송 로그/클릭 로그 저장(리포트 근거)
 
 ---
 
-## 3. 알림톡 템플릿과의 연결(프론트 관점)
-- 알림톡의 모든 버튼 링크는 프론트 URL로 유입됨
-- 링크 유입 시 다음을 고려
-  - 로그인 상태가 아니면 로그인 유도 후 원래 목적 URL로 복귀
-  - alertId 기반으로 API 호출하여 화면 렌더링
+## 3. 알림톡 템플릿(변수 매핑 요약)
+### Template #1 알림 설정 완료
+- Variables: NAME, DESTINATION, DEPART_TIME, ALERT_ID
+- Web link: /alerts/{ALERT_ID}
+
+### Template #2 출발 30분 전
+- Variables: NAME, DESTINATION, DEPART_TIME, ALERT_ID
+- Web link: /alerts/{ALERT_ID}
+
+### Template #3 출발 n분 전 (10~1)
+- Variables: NAME, DESTINATION, DEPART_TIME, ALERT_ID, n
+- Web link: /alerts/{ALERT_ID}
+
+### Template #4 출발 알림 (T-0)
+- Variables: NAME, DESTINATION, DEPART_TIME, ALERT_ID
+- Web links:
+  - /alerts/{ALERT_ID}/route
+  - /taxi?kakaoT=1&from=alert&alertId={ALERT_ID}
+
+### Template #5 첫차 대기 장소 안내
+- Variables: NAME, AREA_NAME, AREA_CODE
+- Web link: /waiting-places?area={AREA_CODE}
+
+### Template #6 귀가 확인
+- Variables: NAME, ALERT_ID
+- Web links:
+  - /arrive?alertId={ALERT_ID}&result=public
+  - /arrive?alertId={ALERT_ID}&result=taxi
 
 ---
 
-## 4. Collaboration Rules
+## 4. Sending Policy (운영 안정성)
+- 과발송 금지:
+  - 동일 이벤트 중복 발송 방지(idempotency key 권장)
+  - 리마인드/반복은 MVP에서는 최소화(정책 확정 시 반영)
+- 발송 실패 시:
+  - 재시도 정책(횟수/간격) 결정 후 적용
+  - 실패 로그 기록
+
+---
+
+## 5. Data/Logging (리포트 근거)
+- alert(설정) 저장
+- message_send_log(템플릿/시각/결과)
+- click_log(버튼 클릭 결과: route/taxi/arrive 등)
+- save_report는 위 로그를 기반으로 생성
+
+---
+
+## 6. Security
+- 비밀키/토큰/발송 API 키는 절대 커밋 금지
+- 환경변수(.env 등)로 관리
+
+---
+
+## 7. Collaboration Rules
 - feature 브랜치 → PR → 리뷰 후 merge
-- URL/문구/정책 변경은 PRD/이슈 업데이트 후 진행
+- 메시지 템플릿/발송 정책 변경은 PRD와 동기화
 
 ---
 
-## 5. Getting Started (Local)
+## 8. Getting Started (Local)
 > 개발 진행에 따라 업데이트
-- Install:
-- Run:
+- Install/Run:
 
 ---
 
-## 6. Owner
-- FE Lead: 자이/백병재
+## 9. Owner
+- BE Lead: 조우/김수연
 - PM: 에단/서낙원
+
