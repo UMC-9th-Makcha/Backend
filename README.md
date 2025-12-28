@@ -1,5 +1,8 @@
 # Makcha - Backend
 
+## 📁 Project Structure
+
+```text
 src/
 ├── config/
 ├── controllers/
@@ -7,21 +10,20 @@ src/
 ├── repositories/
 ├── services/
 ├── response/
-
+│
 ├── database/
 │   ├── migrations/
-│   │   # 테이블 생성/수정/삭제 이력
-│   │   # 예: 20250102_create_user_table.js
+│   │   └── 20250102_create_user_table.js
 │   │
 │   ├── seeders/
-│   │   # 초기 데이터 (역, 노선, 대기장소 등)
-│   │   # 예: seed_stations.js
+│   │   └── seed_stations.js
 │   │
 │   └── index.js
-│       # DB 연결 및 마이그레이션 실행 설정
 │
 ├── app.js
-├── index.js
+└── index.js
+```
+
 
 
 ## 1. Overview
