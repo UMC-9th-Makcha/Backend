@@ -1,5 +1,31 @@
 # Makcha - Backend
 
+## 📁 Project Structure
+
+```text
+src/
+├── config/
+├── controllers/
+├── dtos/
+├── repositories/
+├── services/
+├── response/
+│
+├── database/
+│   ├── migrations/
+│   │   └── 20250102_create_user_table.js
+│   │
+│   ├── seeders/
+│   │   └── seed_stations.js
+│   │
+│   └── index.js
+│
+├── app.js
+└── index.js
+```
+
+
+
 ## 1. Overview
 서버가 막차 타이밍을 계산/스케줄링하고, 카카오톡 **알림톡(템플릿)** 을 발송하는 백엔드 레포입니다.
 발송된 메시지는 버튼 클릭을 통해 웹으로 유입되며, 그 이력은 **세이브 리포트**의 근거가 됩니다.
@@ -77,7 +103,7 @@
 ---
 
 ## 7. Collaboration Rules
-- feature 브랜치 → PR → 리뷰 후 merge
+- feature/{이슈번호}-{기능명}으로 브랜치 파고, develop으로 PR 올려주세요.
 - 메시지 템플릿/발송 정책 변경은 PRD와 동기화
 
 ---
