@@ -1,15 +1,27 @@
 # Makcha - Backend
 
 src/
-├── config/                         # 애플리케이션 전역 설정 및 외부 연동 설정
-├── controllers/                    # req, res 처리, 비즈니스 로직 직접 작성 ❌
-├── dtos/                           # 데이터 전송 객체 (Data Transfer Object)
-├── repositories/                   # 데이터 접근 계층 (DB Layer), ORM 사용
-├── response/                       # 공통 Response 포맷 정의
-├── services/                       # 비즈니스 로직 계층 (핵심)
-├── app.js                          # 서버 설정 파일
-├── index.js                        # 서버 실행 엔트리 포인트
+├── config/
+├── controllers/
+├── dtos/
+├── repositories/
+├── services/
+├── response/
 
+├── database/
+│   ├── migrations/
+│   │   # 테이블 생성/수정/삭제 이력
+│   │   # 예: 20250102_create_user_table.js
+│   │
+│   ├── seeders/
+│   │   # 초기 데이터 (역, 노선, 대기장소 등)
+│   │   # 예: seed_stations.js
+│   │
+│   └── index.js
+│       # DB 연결 및 마이그레이션 실행 설정
+│
+├── app.js
+├── index.js
 
 
 ## 1. Overview
