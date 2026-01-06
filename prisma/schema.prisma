@@ -1,0 +1,211 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum PlaceType {
+  CAFE
+  SAUNA
+  PCROOM
+}
+
+enum TriggerTime {
+  SENT_THIRTY
+  SENT_TEN
+  SENT_THREE
+  SENT_NOW
+}
+
+
+model User {
+  user_id        BigInt   @id @default(autoincrement())
+  kakao_id       BigInt   @unique
+  phone_number   String   @db.VarChar(50)
+  nickname      String    @db.VarChar(200)
+  email         String    @db.VarChar(200)
+  social_type    String   @db.VarChar(200)
+  refresh_token  String   @db.VarChar(200)
+  created_at     DateTime @default(now())
+  updated_at     DateTime? @updatedAt
+  last_login_at   DateTime?
+
+  userTerms            UserTerm[]
+  recentDestinations   RecentDestination[]
+  routeSearches        RouteSearch[]
+  saveReports          SaveReport[]
+  myPlaces             MyPlace[]
+  notificationTriggers NotificationTrigger[]
+  notificationSettings UserNotificationSetting?
+  notificationHistories NotificationHistory[]
+}
+
+model Term {
+  term_id      BigInt   @id @default(autoincrement())
+  term_name    String   @db.VarChar(200)
+  term_content String   @db.VarChar(200)
+  is_required  Boolean
+  created_at   DateTime @default(now())
+  updated_at   DateTime? @updatedAt
+
+  userTerms   UserTerm[]
+}
+
+model UserTerm {
+  user_id      BigInt
+  term_id      BigInt
+  consent_type String @db.VarChar(200)
+  agreed      Boolean
+  agreed_at    DateTime    @default(now())
+  updated_at   DateTime?   @updatedAt
+
+  user User @relation(fields: [user_id], references: [user_id])
+  term Term @relation(fields: [term_id], references: [term_id])
+
+  @@id([user_id, term_id])
+}
+
+model RecentDestination {
+  recent_id        BigInt   @id @default(autoincrement())
+  user_id          BigInt
+  title            String   @db.VarChar(255)
+  road_address     String   @db.VarChar(255)
+  detail_address   String?  @db.VarChar(255)
+  place_id         String   @db.VarChar(50)
+  latitude         Float
+  longitude        Float
+  used_at          DateTime @default(now())
+  created_at       DateTime @default(now())
+  Field            String?  @db.VarChar(255)
+
+  user User @relation(fields: [user_id], references: [user_id])
+}
+
+model Station {
+  station_id    BigInt   @id @default(autoincrement())
+  station_name  String   @db.VarChar(50)
+  station_line  String?  @db.VarChar(20)
+  latitude      Float? 
+  longitude     Float?
+  region        String?
+
+  routeSearches           RouteSearch[]
+  notificationTriggers NotificationTrigger[]
+  originHistories      NotificationHistory[] @relation("origin_station")
+  destinationHistories NotificationHistory[] @relation("destination_station")
+}
+
+model RouteSearch {
+  route_id       BigInt   @id @default(autoincrement())
+  user_id        BigInt
+  station_id     BigInt
+  end_address    String?   @db.VarChar(200)
+  searched_at    DateTime? @default(now())
+  is_success     Boolean?
+  arrived_at     DateTime?
+  traveled_time  Int?
+
+  user    User    @relation(fields: [user_id], references: [user_id])
+  station Station @relation(fields: [station_id], references: [station_id])
+
+  notificationTriggers NotificationTrigger[]
+  notificationHistories NotificationHistory[]
+}
+
+model SaveReport {
+  report_id     BigInt   @id @default(autoincrement())
+  user_id       BigInt
+  month         String   @db.Char(7) // "YYYY-MM"
+  saved_amount  Int
+  total_count   Int
+  created_at    DateTime @default(now())
+  updated_at    DateTime? @updatedAt
+
+  user User @relation(fields: [user_id], references: [user_id])
+
+  @@unique([user_id, month])
+  @@index([user_id, month])
+}
+
+
+model MyPlace {
+  myplace_id           BigInt   @id @default(autoincrement())
+  user_id              BigInt
+  place_type           PlaceType
+  place_address        String
+  place_detail_address String?
+  latitude             Float?
+  longitude            Float?
+  created_at           DateTime @default(now())
+  updated_at           DateTime? @updatedAt
+  deleted_at           DateTime?
+
+  user User @relation(fields: [user_id], references: [user_id])
+}
+
+model NotificationTrigger {
+  notification_id  BigInt   @id @default(autoincrement())
+  route_id         BigInt?
+  user_id          BigInt
+  station_id       BigInt
+  trigger_time     TriggerTime
+  sent_success     Boolean
+  sent_at          DateTime?
+  scheduled        DateTime?
+
+  user    User    @relation(fields: [user_id], references: [user_id])
+  station Station @relation(fields: [station_id], references: [station_id])
+  routeSearch RouteSearch? @relation(fields: [route_id], references: [route_id])
+
+  notificationHistories NotificationHistory[]
+}
+
+model UserNotificationSetting {
+  user_notification_setting_id BigInt   @id @default(autoincrement())
+  user_id                      BigInt   @unique
+  enabled                      Boolean
+  notify_mask                  Int
+  created_at                   DateTime @default(now())
+  updated_at                   DateTime?
+
+  user User @relation(fields: [user_id], references: [user_id])
+}
+
+model NotificationHistory {
+  notification_history_id  BigInt   @id @default(autoincrement())
+  user_id                  BigInt
+  route_search_id          BigInt?
+  notification_trigger_id  BigInt?
+  origin_name              String   @db.VarChar(100)
+  origin_place_id          String   @db.VarChar(50)
+  origin_station_id        BigInt?
+  destination_name         String   @db.VarChar(200)
+  destination_station_id   BigInt?
+  destination_place_id     String   @db.VarChar(50)
+  departure_datetime       DateTime
+  arrival_datetime         DateTime
+  duration_minutes         Int
+  route_detail_json        Json?
+  transfers                Int?
+  walking_minutes          Int?
+  saved_fare_won            Int?
+  created_at               DateTime @default(now())
+
+  user                  User                  @relation(fields: [user_id], references: [user_id])
+  routeSearches           RouteSearch?           @relation(fields: [route_search_id], references: [route_id])
+  notificationTriggers   NotificationTrigger?   @relation(fields: [notification_trigger_id], references: [notification_id])
+  originStation       Station?            @relation("origin_station", fields: [origin_station_id], references: [station_id])
+  destinationStation  Station?            @relation("destination_station", fields: [destination_station_id], references: [station_id])
+
+  @@index([user_id, departure_datetime(sort: Desc)], name: "idx_nh_user_depart")
+}
+
