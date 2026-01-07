@@ -1,11 +1,11 @@
 // src/repositories/recentDestination.repository.js
 
-//import { pisma } from './database/prisma.js'; // 경로 수정 필요
+import { prisma } from '../config/prisma.js';
 
 export const findRecentDestinations = async (userId, limit) => {
     return prisma.recentDestination.findMany({
-        where: { userId },
-        orderBy: { usedAt: "desc" },
+        where: { user_id: userId },
+        orderBy: { used_at: "desc" },
         take: limit,
     });
 };

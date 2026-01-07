@@ -2,7 +2,7 @@ export class CustomError {
   constructor(errorCode, message, path, result = {}) {
     this.errorCode = errorCode;
     this.message = message;
-    this.path = this.path;
+    this.path = path;
     this.result = result;
   }
 }
