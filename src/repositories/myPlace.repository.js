@@ -5,8 +5,9 @@ import { prisma } from '../config/prisma.js';
 export const insertMyPlace = async (data) => {
   return prisma.myPlace.create({
     data: {
-      user: { connect: { user_id: data.user_id } },
+      user: { connect: { user_id: BigInt(data.user_id) } },
       place_type: data.place_type,
+      provider_place_id: data.provider_place_id ?? null,
       place_address: data.place_address,
       place_detail_address: data.place_detail_address,
       latitude: data.latitude,
@@ -14,8 +15,9 @@ export const insertMyPlace = async (data) => {
     },
     select: {
       myplace_id: true,
-      userId: true,
+      user_id: true,
       place_type: true,
+      provider_place_id: true,
       place_address: true,
       place_detail_address: true,
       latitude: true,

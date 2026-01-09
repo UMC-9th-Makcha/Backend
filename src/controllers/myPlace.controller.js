@@ -10,6 +10,11 @@ export const createMyPlaceHandler = async(req, res, next) => {
     try {
         const dto = toCreateMyPlaceDto(req);
 
+        const bigintToString = (v) => (typeof v === "bigint" ? v.toString() : v);
+
+        const normalize = (obj) =>
+        Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, bigintToString(v)]));
+
         // 서비스 호출
         const created = await createMyplace({
             user_id: req.user.user_id,
@@ -22,7 +27,7 @@ export const createMyPlaceHandler = async(req, res, next) => {
                 "PLACE_CREATE_SUCCESS",
                 201,
                 "자주 가는 장소 생성 성공",
-                created
+                normalize(created)
             )
         );
     } catch (err) {

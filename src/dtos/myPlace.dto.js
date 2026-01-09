@@ -7,22 +7,39 @@ export const toCreateMyPlaceDto = (req) => {
     // 입력값
      const {
         place_type,
+        provider_place_id = null,
         place_address,
         place_detail_address = null,
         latitude,
         longitude,
     } = req.body ?? {};
 
-    // 필수값 검증
+    // 유효성 검증
+    // provider_place_id: 선택, 있으면 길이만 체크
+    if (
+        provider_place_id !== null &&
+        (typeof provider_place_id !== "string" || provider_place_id.length > 50)
+    ) {
+        throw new CustomError(
+            "PLACE-400-001",
+            "Invalid provider_place_id",
+            req.originalUrl,
+            {
+                field: "provider_place_id",
+                maxLength: 50,
+            }
+        );
+    }
+
     // place_type: 자주가는장소 CRUD면 PLACE만 받는 걸로 강제
     if (place_type !== "PLACE") {
         throw new CustomError(
             "PLACE-400-001",
             "Invalid place_type",
-            req.original,
+            req.originalUrl,
             {
                 field: "place_type",
-                    allowed: ["PLACE"],
+                allowed: ["PLACE"],
             }
         );
     }
@@ -32,7 +49,7 @@ export const toCreateMyPlaceDto = (req) => {
         throw new CustomError(
             "PLACE-400-001",
             "Invalid place_address",
-            req.original,
+            req.originalUrl,
             {
                 field: "place_address",
             }
@@ -43,7 +60,7 @@ export const toCreateMyPlaceDto = (req) => {
         throw new CustomError(
             "PLACE-400-001",
             "Invalid place_address",
-            req.original,
+            req.originalUrl,
             {
                 field: "place_address",
                 maxLength: 200,
@@ -51,7 +68,7 @@ export const toCreateMyPlaceDto = (req) => {
         );
     }
 
-    // detail address: 선택, 있으면 길이만 체크
+    // detail_address: 선택, 있으면 길이만 체크
     if (
         place_detail_address !== null &&
         place_detail_address !== undefined &&
@@ -96,6 +113,7 @@ export const toCreateMyPlaceDto = (req) => {
 
     return {
         place_type,
+        provider_place_id,
         place_address: place_address.trim(),
         place_detail_address: place_detail_address === "" ? null : place_detail_address,
         latitude,
