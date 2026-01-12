@@ -2,7 +2,6 @@
   "name": "makcha",
   "version": "1.0.0",
   "main": "index.js",
-  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/index.js",
@@ -17,7 +16,6 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^5.0.1",
-    "mysql2": "^3.16.0",
     "node-cron": "^3.0.3",
     "solapi": "^5.5.3",
     "web-push": "^3.6.7"
