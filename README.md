@@ -3,6 +3,9 @@
 ## 📁 Project Structure
 
 ```text
+prisma/
+├── migrations/
+├── schema.prisma
 src/
 ├── config/
 ├── controllers/
@@ -10,16 +13,7 @@ src/
 ├── repositories/
 ├── services/
 ├── response/
-│
-├── database/
-│   ├── migrations/
-│   │   └── 20250102_create_user_table.js
-│   │
-│   ├── seeders/
-│   │   └── seed_stations.js
-│   │
-│   └── index.js
-│
+├── util/
 ├── app.js
 └── index.js
 ```
