@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import * as notiService from "../services/notification.service.js";
-import { CustomSuccess } from "../../../looktoday/response/customSuccess.js";
+import { CustomSuccess } from '../response/customSuccess.js';
+//import { CustomSuccess } from "../../../looktoday/response/customSuccess.js";
 
 // 매 분 0초에 실행
 cron.schedule("* * * * *", async () => {
