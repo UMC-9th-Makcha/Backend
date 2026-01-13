@@ -20,6 +20,7 @@ enum PlaceType {
 }
 
 enum TriggerTime {
+  INIT
   SENT_THIRTY
   SENT_TEN
   SENT_THREE
@@ -163,6 +164,7 @@ model NotificationTrigger {
   route_id        BigInt?
   user_id         BigInt
   station_id      BigInt
+  phone_number    String
   trigger_time    TriggerTime
   sent_success    Boolean
   sent_at         DateTime?
