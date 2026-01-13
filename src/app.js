@@ -1,16 +1,18 @@
 import express from "express";
-import cookieParser from 'cookie-parser'; //카카오 로그인
-import authRouter from './routes/auth.js'; //카카오 로그인
+import notificationRouter from "./routes/notification.route.js";
+import { globalErrorHandler } from "./middleware/error.middleware.js";
 
 const app = express();
+
 app.use(express.json());
-app.use(cookieParser());
 
-app.use('/auth', authRouter);
-
+//라우터
+app.use("/api/alerts", notificationRouter);
 
 app.get("/", (req, res) => {
   res.send("server on");
 });
+
+app.use(globalErrorHandler);
 
 export default app;
