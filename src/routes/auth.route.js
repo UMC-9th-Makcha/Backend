@@ -4,10 +4,14 @@ import { isLoggedIn, isNotLoggedIn } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
-//카카오톡 로그인 api
+//카카오 로그인 api
 router.post('/kakao', isNotLoggedIn, authController.kakaoLogin);
 //카카오 토큰 재발급 api
 router.post('/refresh', authController.refresh);
+//카카오 로그아웃 api
+router.post('/logout', isLoggedIn, authController.logout);
+//카카오 회원 탈퇴
+router.delete('/withdraw', isLoggedIn, authController.withdraw);
 
 // 로컬 테스트용 임시 콜백 - 로컬 로그인 확인차 넣었으며, 실제 배포 이후 해당 코드는 삭제하겠습니다.
 router.get('/kakao/callback', (req, res) => {

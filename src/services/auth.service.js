@@ -159,5 +159,37 @@ const refresh = async (refreshToken) => {
   }
 };
 
+// 로그아웃
+const logout = async (userId) => {
+  // refresh token 무효화 DB에서 제거 되도록 함.
+  await prisma.user.update({
+    where: { user_id: BigInt(userId) },
+    data: { refresh_token: '' },
+  });
+};
 
-export default { kakaoLogin, refresh };
+// 회원 탈퇴
+const withdraw = async (user) => {
+  const { userId } = user;
+
+  try {
+      //지금 구조상 서버에 kakao accessToken 저장 안 하므로
+      // 추후 카카오 연결 해제 로직 수행 단계로 구현을 진행함.
+
+    // 유저 삭제
+    await prisma.user.delete({
+      where: { user_id: BigInt(userId) },
+    });
+  } catch (err) {
+    throw new CustomError(
+      'AUTH-500-001',
+      '회원 탈퇴 처리 중 오류 발생',
+      'auth.service.withdraw'
+    );
+  }
+};
+
+export default { kakaoLogin, refresh, logout, withdraw };
+
+
+

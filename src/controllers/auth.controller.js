@@ -71,7 +71,59 @@ const kakaoLogin = async (req, res, next) => {
       next(err);
     }
   };
+
+  // POST /auth/logout
+const logout = async (req, res, next) => {
+  try {
+    const { userId } = req.user; // isLoggedIn에서 주입됨
+
+    await authService.logout(userId);
+
+    // refreshToken 쿠키 삭제
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
+    });
+
+    const response = new CustomSuccess(
+      'AUTH-200-004',
+      200,
+      '로그아웃 성공'
+    );
+
+    return res.status(response.statusCode).json(response);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// DELETE /auth/withdraw -> 회원탈퇴 api
+const withdraw = async (req, res, next) => {
+  try {
+    const user = req.user;
+
+    await authService.withdraw(user);
+
+    // refreshToken 쿠키 삭제
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
+    });
+
+    const response = new CustomSuccess(
+      'AUTH-200-005',
+      200,
+      '회원 탈퇴 성공'
+    );
+    
+    return res.status(response.statusCode).json(response);
+  } catch (err) {
+    next(err);
+  }
+};
   
   
-  export default { kakaoLogin, refresh };
+  export default { kakaoLogin, refresh, logout, withdraw };
 
