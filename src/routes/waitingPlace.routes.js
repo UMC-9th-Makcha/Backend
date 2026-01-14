@@ -13,6 +13,11 @@ export function createWaitingPlaceRouter(controller) {
     controller.getDirections(req, res, next)
   );
 
+  //딥링크
+  router.get('/:placeId/deeplink', (req, res, next) => 
+    controller.getDeepLink(req, res, next)
+  );
+
   // 장소 상세 정보
   router.get('/:placeId', (req, res, next) => 
     controller.getPlaceDetail(req, res, next)

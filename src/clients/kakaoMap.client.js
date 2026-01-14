@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { kakaoConfig } from '../config/kakao.config.js';
 
+
+
 class KakaoMapClient {
   constructor() {
     this.config = kakaoConfig;
@@ -12,52 +14,108 @@ class KakaoMapClient {
     });
   }
 
+  async getPlaceDetail(placeId) {
+  try {
+    const response = await this.axiosInstance.get(
+      `${this.config.baseURL.local}/search/keyword.json`,
+      {
+        params: {
+          query: placeId,
+          size: 1
+        }
+      }
+    );
+
+    const place = response.data.documents[0];
+    
+    if (!place) {
+      return null;
+    }
+
+    return {
+      id: place.id,
+      name: place.place_name,
+      location: {
+        lat: parseFloat(place.y),
+        lng: parseFloat(place.x)
+      },
+      address: place.address_name,
+      roadAddress: place.road_address_name,
+      phoneNumber: place.phone || null,
+      placeUrl: place.place_url,
+      categoryName: place.category_name,
+      isOpen24Hours: this._detect24Hours(place.place_name),
+      source: 'kakao'
+    };
+  } catch (error) {
+    throw this._handleError(error, 'PLACE_DETAIL_FAILED');
+  }
+}
+
   async searchPlacesByCategory({ lat, lng, radius, category, page = 1 }) {
-    try {
-      const categoryCode = this.config.categoryCode[category];
-      
-      const response = await this.axiosInstance.get(
-        `${this.config.baseURL.local}/search/category.json`,
-        {
-          params: {
-            category_group_code: categoryCode,
-            x: lng,
-            y: lat,
-            radius,
-            sort: 'distance',
-            page,
-            size: 15
-          }
+  try {
+    const categoryCode = this.config.categoryCode[category];
+    
+    // PC방은 키워드 검색 사용
+    if (!categoryCode && this.config.keywordCategories[category]) {
+      const keyword = this.config.keywordCategories[category];
+      return await this.searchPlacesByKeyword({ 
+        lat, 
+        lng, 
+        radius, 
+        keyword,
+        category  // 카테고리 정보 전달
+      });
+    }
+    
+    // 일반 카테고리 검색
+    const response = await this.axiosInstance.get(
+      `${this.config.baseURL.local}/search/category.json`,
+      {
+        params: {
+          category_group_code: categoryCode,
+          x: lng,
+          y: lat,
+          radius,
+          sort: 'distance',
+          page,
+          size: 15
         }
-      );
+      }
+    );
 
+    return this._normalizeSearchResults(response.data, category);
+  } catch (error) {
+    throw this._handleError(error, 'SEARCH_FAILED');
+  }
+}
+
+async searchPlacesByKeyword({ lat, lng, radius, keyword, category = null }) {
+  try {
+    const response = await this.axiosInstance.get(
+      `${this.config.baseURL.local}/search/keyword.json`,
+      {
+        params: {
+          query: keyword,
+          x: lng,
+          y: lat,
+          radius,
+          sort: 'distance',
+          size: 15
+        }
+      }
+    );
+
+    // category가 전달되면 normalizeSearchResults 사용
+    if (category) {
       return this._normalizeSearchResults(response.data, category);
-    } catch (error) {
-      throw this._handleError(error, 'SEARCH_FAILED');
     }
+    
+    return this._normalizeKeywordResults(response.data);
+  } catch (error) {
+    throw this._handleError(error, 'SEARCH_FAILED');
   }
-
-  async searchPlacesByKeyword({ lat, lng, radius, keyword }) {
-    try {
-      const response = await this.axiosInstance.get(
-        `${this.config.baseURL.local}/search/keyword.json`,
-        {
-          params: {
-            query: keyword,
-            x: lng,
-            y: lat,
-            radius,
-            sort: 'distance',
-            size: 15
-          }
-        }
-      );
-
-      return this._normalizeKeywordResults(response.data);
-    } catch (error) {
-      throw this._handleError(error, 'SEARCH_FAILED');
-    }
-  }
+}
 
   async getWalkingDirections({ origin, destination }) {
     try {
@@ -127,19 +185,34 @@ class KakaoMapClient {
 
   _normalizeSearchResults(data, category) {
     return {
-      places: data.documents.map(place => ({
-        id: place.id,
-        name: place.place_name,
-        category: category,
-        lat: parseFloat(place.y),
-        lng: parseFloat(place.x),
-        address: place.address_name,
-        roadAddress: place.road_address_name,
-        phoneNumber: place.phone || null,
-        distance: parseInt(place.distance),
-        isOpen24Hours: this._detect24Hours(place.place_name),
-        source: 'kakao'
-      })),
+      places: data.documents
+        .filter(place => {
+          // PC_ROOM 카테고리일 때만 추가 필터링
+          if (category === 'PC_ROOM') {
+            const categoryName = place.category_name || '';
+            
+            // 카테고리 경로에 'PC방'이 정확히 포함되어 있는지 확인
+            // 예: "문화시설 > PC방" 형태
+            return categoryName.includes('PC방');
+          }
+          
+          // 다른 카테고리는 필터링 없이 전부 반환
+          return true;
+        })
+        .map(place => ({
+          id: place.id,
+          name: place.place_name,
+          category: category,
+          lat: parseFloat(place.y),
+          lng: parseFloat(place.x),
+          address: place.address_name,
+          roadAddress: place.road_address_name,
+          phoneNumber: place.phone || null,
+          placeUrl: place.place_url,
+          distance: parseInt(place.distance),
+          isOpen24Hours: this._detect24Hours(place.place_name),
+          source: 'kakao'
+        })),
       meta: {
         totalCount: data.meta.total_count,
         isEnd: data.meta.is_end

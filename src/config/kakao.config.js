@@ -10,9 +10,16 @@ export const kakaoConfig = {
   timeout: parseInt(process.env.API_TIMEOUT) || 5000,
   retryAttempts: parseInt(process.env.API_RETRY_ATTEMPTS) || 2,
   
-  categoryCode: {
+    categoryCode: {
+    CONVENIENCE_STORE: 'CS2',
     CAFE: 'CE7',
-    PC_ROOM: 'CT1',
-    SAUNA: 'AC5'
+    FAST_FOOD: 'FD6',
+    // PC_ROOM은 키워드 검색 사용
+    PC_ROOM: null  // 또는 제거
+  },
+  
+  // 키워드 검색용 카테고리 추가
+  keywordCategories: {
+    PC_ROOM: 'PC방'
   }
 };

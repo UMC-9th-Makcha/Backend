@@ -8,6 +8,27 @@ class WaitingPlaceService {
     this.timeUtil = timeUtil;
   }
 
+  async getDeepLink(deepLinkDto) {
+  try {
+    // 카카오맵 딥링크 URL 생성 (장소 조회 없이 바로 생성)
+    const deepLink = `kakaomap://route?sp=${deepLinkDto.fromLat},${deepLinkDto.fromLng}&ep=${deepLinkDto.toLat},${deepLinkDto.toLng}&by=FOOT`;
+
+    return {
+      place: {
+        id: deepLinkDto.placeId,
+        name: deepLinkDto.placeName,
+        location: {
+          lat: deepLinkDto.toLat,
+          lng: deepLinkDto.toLng
+        }
+      },
+      deepLink
+    };
+  } catch (error) {
+    throw error;
+  }
+}
+
   async findNearbyPlaces(searchDto) {
     const currentTime = new Date();
     const { lat, lng, category, openOnly, limit } = searchDto;
