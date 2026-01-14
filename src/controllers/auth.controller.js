@@ -37,5 +37,41 @@ const kakaoLogin = async (req, res, next) => {
       next(err);
     }
   };
+
+  //POST /auth/refresh 카카오 토큰 재발급
+  const refresh = async (req, res, next) => {
+    try {
+      const refreshToken = req.cookies.refreshToken;
   
-  export default { kakaoLogin };
+      if (!refreshToken) {
+        throw new CustomError(
+          'AUTH-401-002',
+          'Refresh Token 누락',
+          req.originalUrl
+        );
+      }
+  
+      const result = await authService.refresh(refreshToken);
+  
+      res.cookie('refreshToken', result.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'none',
+      });
+  
+      const response = new CustomSuccess(
+        'AUTH-200-002',
+        200,
+        '토큰 재발급 성공',
+        { accessToken: result.accessToken }
+      );
+  
+      return res.status(response.statusCode).json(response);
+    } catch (err) {
+      next(err);
+    }
+  };
+  
+  
+  export default { kakaoLogin, refresh };
+

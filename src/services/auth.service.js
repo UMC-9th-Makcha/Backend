@@ -9,7 +9,7 @@ import { CustomError } from '../response/customError.js';
  */
 const kakaoLogin = async (code) => {
   try {
-    // 인가 코드 => 카카오 Access Token 발급
+    // 카카오 Access Token 발급 진행.
     const tokenRes = await axios.post(
       'https://kauth.kakao.com/oauth/token',
       new URLSearchParams({
@@ -18,84 +18,83 @@ const kakaoLogin = async (code) => {
         redirect_uri: process.env.KAKAO_REDIRECT_URI,
         code,
       }),
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-      }
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
 
     const kakaoAccessToken = tokenRes.data.access_token;
 
     // 카카오 유저 정보 조회
     const meRes = await axios.get('https://kapi.kakao.com/v2/user/me', {
-      headers: {
-        Authorization: `Bearer ${kakaoAccessToken}`,
-      },
+      headers: { Authorization: `Bearer ${kakaoAccessToken}` },
     });
+    
+    const kakaoId = BigInt(meRes.data.id);
+    
+    // 파싱을 안전하게 받을 수 있도록 변경함.
+    const kakaoAccount = meRes.data.kakao_account ?? {};
+    const profile = kakaoAccount.profile ?? {};
+    
+    const nickname = profile.nickname ?? '카카오유저';
+    const profileImage = profile.profile_image_url ?? null;
+    const email = kakaoAccount.email ?? '';
 
-    const kakaoId = BigInt(meRes.data.id); // 카카오 고유 ID
-    const { nickname, profile_image_url: profileImage } =
-      meRes.data.kakao_account.profile;
-    const email = meRes.data.kakao_account.email;
-
-    // 사용자 정보 upsert
-    // 최초 로그인: create
-    // 재로그인: update
+    // 사용자 upsert -> 프리즈마에 일치하게 구현을 완료함.
     const user = await prisma.user.upsert({
-      where: { kakaoId },
+      where: { kakao_id: kakaoId },
       update: {
         nickname,
         email,
-        lastLoginAt: new Date(),
+        last_login_at: new Date(),
       },
       create: {
-        kakaoId,
+        kakao_id: kakaoId,
         nickname,
         email,
-        socialType: 'KAKAO',
+        social_type: 'KAKAO',
+        phone_number: '',          // NOT NULL 대응
+        refresh_token: '',         // 최초 빈 값
       },
     });
 
-    // JWT Payload 
-    // Access / Refresh Token 모두 kakaoId + 내부 userId 포함
+    //  JWT Payload
     const payload = {
       kakaoId: kakaoId.toString(),
-      userId: user.userId,
+      userId: user.user_id.toString(),
     };
 
-    // Access Token 발급
+    // Access Token
     const accessToken = jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRES_IN || 3600,
+      expiresIn: Number(process.env.JWT_EXPIRES_IN || 3600),
     });
 
-    // Refresh Token 발급
+    // Refresh Token
     const refreshToken = jwt.sign(payload, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '14d',
     });
 
-    // Refresh Token DB 저장
-    // RTR(Refresh Token Rotation) 대비 -> FE.API 반영
+    // Refresh Token DB 저장 
     await prisma.user.update({
-      where: { userId: user.userId },
-      data: { refreshToken },
+      where: { user_id: user.user_id },
+      data: { refresh_token: refreshToken },
     });
 
-    // 컨트롤러로 전달할 결과
+    // 응답
     return {
-      refreshToken, // 쿠키로 내려줄 RT
+      refreshToken,
       response: {
         accessToken,
         expiresIn: Number(process.env.JWT_EXPIRES_IN || 3600),
         user: {
-          id: user.userId,        // 내부 사용자 ID
+          id: user.user_id.toString(),
           nickname: user.nickname,
-          profileImage,           // 카카오 프로필 이미지
+          profileImage,
         },
       },
     };
   } catch (err) {
-    // 카카오 로그인 처리 중 서버 오류
+    console.error('Kakao login error detail:'); //카카오톡 로그인 에러 확인
+    console.error(err.response?.data || err.message || err);
+  
     throw new CustomError(
       'COM-500-001',
       'Kakao login failed',
@@ -104,4 +103,61 @@ const kakaoLogin = async (code) => {
   }
 };
 
-export default { kakaoLogin };
+//카카오톡 토큰 재발급 api
+const refresh = async (refreshToken) => {
+  try {
+    // RT 검증
+    const payload = jwt.verify(refreshToken, process.env.JWT_SECRET);
+
+    // DB RT 비교
+    const user = await prisma.user.findUnique({
+      where: { user_id: BigInt(payload.userId) },
+    });
+
+    if (!user || user.refresh_token !== refreshToken) {
+      throw new CustomError(
+        'AUTH-401-003',
+        'Refresh Token 무효',
+        'auth.service.refresh'
+      );
+    }
+
+    // 새 토큰 발급
+    const newPayload = {
+      userId: payload.userId,
+      kakaoId: payload.kakaoId,
+    };
+
+    const newAccessToken = jwt.sign(
+      newPayload,
+      process.env.JWT_SECRET,
+      { expiresIn: Number(process.env.JWT_EXPIRES_IN || 3600) }
+    );
+
+    const newRefreshToken = jwt.sign(
+      newPayload,
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '14d' }
+    );
+
+    // RT 교체 
+    await prisma.user.update({
+      where: { user_id: user.user_id },
+      data: { refresh_token: newRefreshToken },
+    });
+
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+    };
+  } catch (err) {
+    throw new CustomError(
+      'AUTH-401-004',
+      'Refresh Token 만료 또는 오류',
+      'auth.service.refresh'
+    );
+  }
+};
+
+
+export default { kakaoLogin, refresh };
