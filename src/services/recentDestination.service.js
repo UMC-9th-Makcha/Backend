@@ -1,7 +1,9 @@
 // src/services/recentDestination.service.js
 
-import { findRecentDestinations } from "../repositories/recentDestination.repository.js";
-import { upsertRecentDestination } from "../repositories/recentDestination.repository.js";
+import {
+    findRecentDestinations,
+    upsertRecentDestination
+} from "../repositories/recentDestination.repository.js";
 import { toRecentDestinationDto } from "../dtos/recentDestination.dto.js";
 import { CustomError } from "../response/customError.js";
 
@@ -20,8 +22,16 @@ export const recordRecentDestination = async({
     latitude,
     longitude,    
 }) => {
-    if (!userId) throw new CustomError("UNAUTHORIZED", "Unauthorized", 401);
-    if (!placeId) throw new CustomError("INVALID_PLACE_ID", "place_id 필요", 400);
+    if (!userId) {
+        const e = new CustomError("UNAUTHORIZED", "Unauthorized", "recordRecentDestination", {});
+        e.statusCode = 401;
+        throw e;
+    }
+    if (!placeId) {
+        const e = new CustomError("INVALID_PLACE_ID", "place_id 필요", "recordRecentDestination", {});
+        e.statusCode = 400;
+        throw e;
+    }
 
     const userIdBigint = typeof userId === "bigint" ? userId : BigInt(userId);
     const usedAt = new Date();

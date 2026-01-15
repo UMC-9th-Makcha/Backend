@@ -1,17 +1,16 @@
 import express from "express";
-import recentDestinationRouter from './routes/recentDestination.route.js';
 import cors from "cors";
 import cookieParser from "cookie-parser"; //쿠키 파싱
 
 
 import notificationRouter from "./routes/notification.route.js";
 import authRouter from "./routes/auth.route.js";
+import recentDestinationRouter from './routes/recentDestination.route.js';
 import { globalErrorHandler } from "./middleware/error.middleware.js";
 
 const app = express();
 
 app.use(express.json());
-app.use("/api", recentDestinationRouter);
 app.use(cookieParser());
 
 // CORS - 쿠키 전송 필수
@@ -23,6 +22,7 @@ app.use(cors({
 //라우터
 app.use("/api/alerts", notificationRouter);
 app.use('/auth', authRouter);
+app.use("/api", recentDestinationRouter);
 
 app.get("/", (req, res) => {
   res.send("server on");

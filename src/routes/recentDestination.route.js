@@ -1,12 +1,17 @@
 import { Router } from "express";
-import { devAuth } from "../middlewares/devAuth.js";
-import { getRecentDestinationsHandler } from "../controllers/recentDestination.controller.js";
+import { isLoggedIn } from "../middleware/auth.middleware.js";
+import { createRecentDestinationHandler, getRecentDestinationsHandler } from "../controllers/recentDestination.controller.js";
 
 const router = Router();
 
+router.post(
+    "/recent-destinations",
+    isLoggedIn,
+    createRecentDestinationHandler
+)
 router.get(
     "/recent-destinations",
-    devAuth,
+    isLoggedIn,
     getRecentDestinationsHandler
 );
 

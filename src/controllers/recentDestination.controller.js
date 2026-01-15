@@ -1,18 +1,59 @@
 // src/controllers/recentDestination.controller.js
 import { CustomSuccess } from "../response/customSuccess.js";
 import { CustomError } from "../response/customError.js";
-import { getRecentDestinations } from "../services/recentDestination.service.js";
+import {
+    recordRecentDestination,
+    getRecentDestinations
+} from "../services/recentDestination.service.js";
+import { toRecentDestinationDto } from "../dtos/recentDestination.dto.js";
+
+export const createRecentDestinationHandler = async (req, res, next) => {
+  try {
+    const userId = req.user.userId;
+    if (!userId) {
+        const e = new CustomError("UNAUTHORIZED", "Unauthorized", req.originalUrl, {});
+        e.statusCode = 401;
+        throw e;
+    }
+
+    const {
+      placeId,
+      title,
+      roadAddress,
+      detailAddress = null,
+      latitude,
+      longitude,
+    } = req.body;
+
+    const result = await recordRecentDestination({
+      userId,
+      placeId,
+      title,
+      roadAddress,
+      detailAddress,
+      latitude,
+      longitude,
+    });
+
+    return res.status(200).json(
+        new CustomSuccess(
+            "RECENT_DESTINATION_UPSERT_OK",
+            200,
+            "최근 목적지 저장 성공",
+            toRecentDestinationDto(result)));
+  } catch (err) {
+    next(err);
+  }
+};
 
 export const getRecentDestinationsHandler = async(req, res, next) => {
     try {
         // 유저 확인
-        const userId = req.userId;
+        const userId = req.user.userId;
         if (!userId) {
-            throw new CustomError(
-                "UNAUTHORIZED",
-                "Unauthorized",
-                401
-            );
+            const e = new CustomError("UNAUTHORIZED", "Unauthorized", req.originalUrl, {});
+            e.statusCode = 401;
+            throw e;
         }
 
         const userIdBigint = BigInt(userId);
@@ -24,11 +65,9 @@ export const getRecentDestinationsHandler = async(req, res, next) => {
             const n  = Number(limitRaw);
 
             if (!Number.isInteger(n) || n <= 0) {
-                throw new CustomError(
-                    "INVALID_LIMIT",
-                    "Invalid limit",
-                    400
-                )
+                const e = new CustomError("INVALID_LIMIT", "Invalid limit", req.originalUrl, {});
+                e.statusCode = 400;
+                throw e;
             }
 
             limit = Math.min(n, 10);    // limit 최댓값 10
@@ -46,10 +85,6 @@ export const getRecentDestinationsHandler = async(req, res, next) => {
         );
     } catch (err) {
         console.error(err);
-        throw new CustomError(
-            "COM-500-001",
-            "Internal Server Error",
-            500
-        )
+        return next(err);
     }
 };

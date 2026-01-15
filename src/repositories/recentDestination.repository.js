@@ -1,6 +1,5 @@
 // src/repositories/recentDestination.repository.js
-
-import { prisma } from '../config/prisma.js';
+import { prisma } from "../config/prisma.js";
 
 export const findRecentDestinations = async (userId, limit) => {
     return prisma.recentDestination.findMany({
@@ -10,40 +9,40 @@ export const findRecentDestinations = async (userId, limit) => {
     });
 };
 
-export const upsertRecentDestination = async({
-    user_id,
+export const upsertRecentDestination = async ({
+    userId,
     title,
-    road_address,
-    detail_address,
-    place_id,
+    roadAddress,
+    detailAddress,
+    placeId,
     latitude,
     longitude,
-    used_at,
+    usedAt,
 }) => {
-    return await prisma.recentDestination.upsert({
+    return prisma.recentDestination.upsert({
         where: {
             user_place_unique: {
-                user_id,
-                place_id,
+                user_id: userId,
+                place_id: placeId,
             },
         },
         create: {
-            user_id,
+            user_id: userId,
             title,
-            road_address,
-            detail_address: detail_address ?? null,
-            place_id,
+            road_address: roadAddress,
+            detail_address: detailAddress ?? null,
+            place_id: placeId,
             latitude,
             longitude,
-            used_at,
+            used_at: usedAt,
         },
-        update: {         
+        update: {
             title,
-            road_address,
-            detail_address: detail_address ?? null,
+            road_address: roadAddress,
+            detail_address: detailAddress ?? null,
             latitude,
             longitude,
-            used_at,
+            used_at: usedAt,
         },
     });
 };
