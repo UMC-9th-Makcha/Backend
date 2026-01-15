@@ -6,4 +6,3 @@ export class CustomSuccess {
     this.result = result;
   }
 }
-

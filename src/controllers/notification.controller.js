@@ -1,6 +1,15 @@
 import cron from "node-cron";
 import * as notiService from "../services/notification.service.js";
-import { CustomSuccess } from "../response/customSuccess.js";
+import { CustomSuccess } from '../response/customSuccess.js';
+
+// 매 분 0초에 실행
+cron.schedule("* * * * *", async () => {
+    try {
+        await checkAndSendNotifications();
+    } catch (error) {
+        console.error("스케줄러 에러:", error);
+    }
+});
 
 export const createNotification = async (req, res, next) => {
     try {
