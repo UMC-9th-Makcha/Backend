@@ -1,6 +1,6 @@
 import axios from 'axios';
 import jwt from 'jsonwebtoken';
-import prisma from '../database/prisma.js';
+import authRepository from '../repositories/auth.repository.js';
 import { CustomError } from '../response/customError.js';
 
 /**
@@ -39,21 +39,10 @@ const kakaoLogin = async (code) => {
     const email = kakaoAccount.email ?? '';
 
     // 사용자 upsert -> 프리즈마에 일치하게 구현을 완료함.
-    const user = await prisma.user.upsert({
-      where: { kakao_id: kakaoId },
-      update: {
-        nickname,
-        email,
-        last_login_at: new Date(),
-      },
-      create: {
-        kakao_id: kakaoId,
-        nickname,
-        email,
-        social_type: 'KAKAO',
-        phone_number: '',          // NOT NULL 대응
-        refresh_token: '',         // 최초 빈 값
-      },
+    const user = await authRepository.upsertKakaoUser({
+      kakaoId,
+      nickname,
+      email,
     });
 
     //  JWT Payload
@@ -73,10 +62,7 @@ const kakaoLogin = async (code) => {
     });
 
     // Refresh Token DB 저장 
-    await prisma.user.update({
-      where: { user_id: user.user_id },
-      data: { refresh_token: refreshToken },
-    });
+    await authRepository.updateRefreshToken(user.user_id, refreshToken);
 
     // 응답
     return {
@@ -110,9 +96,7 @@ const refresh = async (refreshToken) => {
     const payload = jwt.verify(refreshToken, process.env.JWT_SECRET);
 
     // DB RT 비교
-    const user = await prisma.user.findUnique({
-      where: { user_id: BigInt(payload.userId) },
-    });
+    const user = await authRepository.findUserById(payload.userId);
 
     if (!user || user.refresh_token !== refreshToken) {
       throw new CustomError(
@@ -141,10 +125,7 @@ const refresh = async (refreshToken) => {
     );
 
     // RT 교체 
-    await prisma.user.update({
-      where: { user_id: user.user_id },
-      data: { refresh_token: newRefreshToken },
-    });
+    await authRepository.updateRefreshToken(user.user_id, newRefreshToken);
 
     return {
       accessToken: newAccessToken,
@@ -162,10 +143,7 @@ const refresh = async (refreshToken) => {
 // 로그아웃
 const logout = async (userId) => {
   // refresh token 무효화 DB에서 제거 되도록 함.
-  await prisma.user.update({
-    where: { user_id: BigInt(userId) },
-    data: { refresh_token: '' },
-  });
+  await authRepository.updateRefreshToken(userId, '');
 };
 
 // 회원 탈퇴
@@ -177,9 +155,7 @@ const withdraw = async (user) => {
       // 추후 카카오 연결 해제 로직 수행 단계로 구현을 진행함.
 
     // 유저 삭제
-    await prisma.user.delete({
-      where: { user_id: BigInt(userId) },
-    });
+    await authRepository.deleteUserById(userId);
   } catch (err) {
     throw new CustomError(
       'AUTH-500-001',
@@ -190,6 +166,3 @@ const withdraw = async (user) => {
 };
 
 export default { kakaoLogin, refresh, logout, withdraw };
-
-
-
