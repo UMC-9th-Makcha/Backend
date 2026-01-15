@@ -12,7 +12,7 @@ export const globalErrorHandler = (err, req, res, next) => {
     res.status(statusCode).json({
         errorCode: errorCode,
         message: message,
-        path: path,
+        path: err.path || req.originalUrl, //정의되지 않는 문제가 있습니다.
         result: result
     });
 };
