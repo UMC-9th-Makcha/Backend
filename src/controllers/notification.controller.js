@@ -11,19 +11,26 @@ cron.schedule("* * * * *", async () => {
     }
 });
 
+// BigInt 변환을 위한 공통 유틸 함수 (코드 중복 방지)
+const toSafeJSON = (data) => {
+    return JSON.parse(JSON.stringify(data, (key, value) =>
+        typeof value === 'bigint' ? value.toString() : value
+    ));
+};
+
 export const createNotification = async (req, res, next) => {
     try {
-        const result = await notiService.registerNotification(req.body);
-
-        const safeResult = JSON.parse(JSON.stringify(result, (key, value) =>
-            typeof value === 'bigint' ? value.toString() : value
-        ));
+        const user_id = req.user.id; 
+        const result = await notiService.registerNotification({
+            ...req.body,
+            user_id: user_id
+        });
 
         const response = new CustomSuccess(
             "NOTI-200-001",
             200,
             "막차 알림 예약이 완료되었습니다.",
-            safeResult
+            toSafeJSON(result)
         );
 
         return res.status(response.statusCode).json(response);
@@ -44,7 +51,7 @@ cron.schedule("* * * * *", async () => {
 export const cancelNotification = async (req, res, next) => {
     try {
         const { notification_id } = req.params;
-        const user_id = 1;
+        const user_id = req.user.id;
 
         await notiService.cancelNotification(notification_id, user_id);
 
@@ -62,18 +69,14 @@ export const cancelNotification = async (req, res, next) => {
 
 export const getSettings = async (req, res, next) => {
     try {
-        const user_id = 1;
+        const user_id = req.user.id;
         const settings = await notiService.getMySettings(user_id);
-
-        const safeSettings = JSON.parse(JSON.stringify(settings, (key, value) =>
-            typeof value === 'bigint' ? value.toString() : value
-        ));
 
         const response = new CustomSuccess(
             "NOTI-200-003",
             200,
             "알림 설정을 성공적으로 조회했습니다.",
-            safeSettings
+            toSafeJSON(settings)
         );
         return res.status(response.statusCode).json(response);
     } catch (error) {
@@ -83,20 +86,16 @@ export const getSettings = async (req, res, next) => {
 
 export const updateSettings = async (req, res, next) => {
     try {
-        const user_id = 1;
+        const user_id = req.user.id;
         const { timeList } = req.body;
 
         const result = await notiService.updateSettings(user_id, timeList);
-
-        const safeResult = JSON.parse(JSON.stringify(result, (key, value) =>
-            typeof value === 'bigint' ? value.toString() : value
-        ));
 
         const response = new CustomSuccess(
             "NOTI-200-004",
             200,
             "알림 설정이 변경되었습니다.",
-            safeResult
+            toSafeJSON(result)
         );
         return res.status(response.statusCode).json(response);
     } catch (error) {
