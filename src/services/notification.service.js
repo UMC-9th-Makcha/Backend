@@ -4,6 +4,48 @@ import { CustomError } from "../response/customError.js"; // 파일 경로와 �
 import { sendSMS } from "../utils/sms.util.js"; // SMS 발송 모듈 가정 (추후 변경)
 import { checkSubwayRealtime } from "../utils/subway.util.js"; // 실시간 API 가정 (추후 변경)
 
+export const registerNotification = async (body) => {
+    const data = bodyToNotification(body);
+    const currentTime = new Date();
+
+    // 막차까지 남은 시간 계산하기
+    const diffMin = Math.floor((data.scheduled - currentTime) / 60000);
+
+    // 남은 시간 기준으로 DB에 들어갈 상태값 결정
+    let initTrigger = 'SENT_THIRTY';
+    if (diffMin <= 3) initTrigger = 'SENT_NOW';
+    else if (diffMin <= 10) initTrigger = 'SENT_THREE';
+    else if (diffMin <= 30 ) initTrigger = 'SENT_TEN';
+
+    // 레포지토리 호출 시 initTrigger 덮어씌워서 전달
+    const result = await notiRepo.addNotification({
+        ...data,
+        trigger_time: initTrigger
+    });
+
+    await sendSMS("01091459221", `[막차] 알림 예약 완료!`);
+
+    return result;
+}
+
+const getBitByTime = (min) => {
+    if(min === 1) return 1;
+    if(min === 3) return 2;
+    if(min === 5) return 4;
+    if(min === 10) return 8;
+    if(min === 30) return 16;
+    return 0;
+}
+
+// 마이페이지 (커스텀 설정)
+export const updateSettings = async (user_id, timeList) => {
+    if (!timeList || timeList.length === 0) {
+        return await notiRepo.updateSettings(user_id, { notify_mask: 0, enabled: false });
+    }
+    const mask = timeList.reduce((add, time) => add | getBitByTime(Number(time)), 0);
+    return await notiRepo.updateSettings(user_id, { notify_mask: mask, enabled: true });
+};
+
 export const checkAndSendNotifications = async () => {
     const currentTime = new Date();
     const MY_PHONE_NUMBER = "01091459221"; // 테스트용 하드코딩
@@ -30,22 +72,41 @@ export const checkAndSendNotifications = async () => {
             const diffMin = Math.floor(diffMs / 60000);
 
             let message = "";
-            let nextTrigger = null;
+            let nextTrigger = noti.trigger_time;
+
+            // 마이페이지에서 설정한 경우 (커스텀모드)
+            const userSetting = noti.user.notificationSettings;
+
+            if (userSetting && userSetting.enabled && userSetting.notify_mask > 0) {
+                const currentBit = getBitByTime(diffMin);
+
+                //유저가 설정한 비트와 현재 남은 시간 비트가 일치하는지 확인
+                if ((userSetting.notify_mask & currentBit) !== 0) {
+                    // 도달하는 '분'에 보냈는지 체크
+                    if (noti.last_sent_min != diffMin) {
+                        message = `막차 출발 ${diffMin}분 전입니다.`;
+                    }
+                }
+            }
+            
 
             // 2. 현재 trigger_time 상태에 따른 분기 처리
-            if (noti.trigger_time === 'SENT_THIRTY' && diffMin <= 30) {
-                message = "막차 출발 30분 전입니다.";
-                nextTrigger = 'SENT_TEN';
-            } 
-            else if (noti.trigger_time === 'SENT_TEN' && diffMin <= 10) {
-                message = "막차 출발 10분 전입니다.";
-                nextTrigger = 'SENT_THREE';
-            } 
-            else if (noti.trigger_time === 'SENT_THREE' && diffMin <= 3) {
-                message = "막차 출발 3분 전입니다.";
-                nextTrigger = 'SENT_NOW';
-            } 
-            else if (noti.trigger_time === 'SENT_NOW' && diffMin <= 15) { // 적절한 실시간 감시 범위
+            else {
+                if (noti.trigger_time === 'SENT_THIRTY' && diffMin <= 30) {
+                    message = "막차 출발 30분 전입니다.";
+                    nextTrigger = 'SENT_TEN';
+                } 
+                else if (noti.trigger_time === 'SENT_TEN' && diffMin <= 10) {
+                    message = "막차 출발 10분 전입니다.";
+                    nextTrigger = 'SENT_THREE';
+                } 
+                else if (noti.trigger_time === 'SENT_THREE' && diffMin <= 3) {
+                    message = "막차 출발 3분 전입니다.";
+                    nextTrigger = 'SENT_NOW';
+                } 
+            }
+
+            if (noti.trigger_time === 'SENT_NOW' && diffMin <= 15) { // 적절한 실시간 감시 범위
                 const isRealTimeMatch = await checkSubwayRealtime(noti);
                 
                 if (isRealTimeMatch === null) {
@@ -66,19 +127,13 @@ export const checkAndSendNotifications = async () => {
             // 3. 메시지가 결정되었다면 문자 발송 및 DB 업데이트
             if (message) {
                 await sendSMS(MY_PHONE_NUMBER, message);
-
-                if (noti.trigger_time === 'SENT_NOW') {
-                    // 최종 단계 완료 시
-                    await notiRepo.updateSentStatus(noti.notification_id, {
-                        sent_success: true,
-                        sent_at: new Date()
-                    });
-                } else {
-                    // 다음 단계로 업데이트 (sent_success는 false 유지)
-                    await notiRepo.updateSentStatus(noti.notification_id, {
-                        trigger_time: nextTrigger
-                    });
-                }
+                
+                // 상태 업데이트 (nextTrigger가 있으면 업데이트, 없으면 완료 처리)
+                await notiRepo.updateSentStatus(noti.notification_id, {
+                    trigger_time: nextTrigger,
+                    sent_success: nextTrigger === null ? true : false,
+                    sent_at: new Date()
+                });
             }
         } catch (innerError) {
             // 개별 알림 에러 로그 (스케줄러 중단 방지)
@@ -98,13 +153,18 @@ export const cancelNotification = async (notification_id, user_id) => {
         );
     }
 
-    if (notification.user_id !== user_id) {
+    if (String(notification.user_id) !== String(user_id)) {
         throw new CustomError(
             "AUTH-403-001",
             "본인의 알림만 취소할 수 있습니다.",
             "/api/alerts/cancel"
         );
     }
+
+    try {
+        const MY_PHONE_NUMBER = "01091459221";
+        await sendSMS(MY_PHONE_NUMBER, "예약하신 알림이 취소되었습니다.");
+    } catch (e) { console.error(e); }
 
     //물리적 삭제로 알림 취소 로직 구현
     return await notiRepo.deleteNotification(notification_id);

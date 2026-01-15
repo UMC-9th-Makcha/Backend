@@ -7,4 +7,3 @@ export class CustomSuccess {
   }
 }
 
-module.exports = { CustomSuccess };
