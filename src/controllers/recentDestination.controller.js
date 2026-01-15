@@ -3,17 +3,15 @@ import { CustomSuccess } from "../response/customSuccess.js";
 import { CustomError } from "../response/customError.js";
 import { getRecentDestinations } from "../services/recentDestination.service.js";
 
-export const getRecentDestinationsHandler = async(req, res) => {
+export const getRecentDestinationsHandler = async(req, res, next) => {
     try {
         // 유저 확인
         const userId = req.userId;
         if (!userId) {
-            return res.status(401).json(
-                new CustomError(
-                    "UNAUTHORIZED",
-                    "Unauthorized",
-                    req.originalUrl
-                )
+            throw new CustomError(
+                "UNAUTHORIZED",
+                "Unauthorized",
+                401
             );
         }
 
@@ -26,13 +24,11 @@ export const getRecentDestinationsHandler = async(req, res) => {
             const n  = Number(limitRaw);
 
             if (!Number.isInteger(n) || n <= 0) {
-                return res.status(400).json(
-                    new CustomError(
-                        "INVALID_LIMIT",
-                        "Invalid limit",
-                        req.originalUrl
-                    )
-                );
+                throw new CustomError(
+                    "INVALID_LIMIT",
+                    "Invalid limit",
+                    400
+                )
             }
 
             limit = Math.min(n, 10);    // limit 최댓값 10
@@ -50,12 +46,10 @@ export const getRecentDestinationsHandler = async(req, res) => {
         );
     } catch (err) {
         console.error(err);
-        return res.status(500).json(
-            new CustomError(
-                "COM-500-001",
-                "Internal Server Error",
-                req.originalUrl
-            )
-        );
+        throw new CustomError(
+            "COM-500-001",
+            "Internal Server Error",
+            500
+        )
     }
 };

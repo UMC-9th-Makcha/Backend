@@ -12,7 +12,7 @@ export const globalErrorHandler = (err, req, res, next) => {
     res.status(statusCode).json({
         errorCode: errorCode,
         message: message,
-        path: path,
+        path: req.originalUrl,
         result: result
     });
 };

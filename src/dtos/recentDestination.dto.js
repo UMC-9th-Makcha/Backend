@@ -1,6 +1,6 @@
 // src/dtos/recentDestination.dto.js
 
-export const toRecentDestinationsDto = (row) => ({
+export const toRecentDestinationDto = (row) => ({
     recentId: row.recent_id?.toString(),
     userId: row.user_id?.toString(),
     title: row.title,
