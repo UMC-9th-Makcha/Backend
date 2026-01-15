@@ -53,7 +53,7 @@ export const cancelNotification = async (req, res, next) => {
 
 export const getSettings = async (req, res, next) => {
     try {
-        const user_id = req.user.id;
+        const user_id = 1;
         const settings = await notiService.getMySettings(user_id);
 
         const safeSettings = JSON.parse(JSON.stringify(settings, (key, value) =>
@@ -74,7 +74,7 @@ export const getSettings = async (req, res, next) => {
 
 export const updateSettings = async (req, res, next) => {
     try {
-        const user_id = req.user.id;
+        const user_id = 1;
         const { timeList } = req.body;
 
         const result = await notiService.updateSettings(user_id, timeList);

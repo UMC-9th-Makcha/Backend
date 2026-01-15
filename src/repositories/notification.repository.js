@@ -72,6 +72,19 @@ export const deleteNotification = async (notification_id) => {
     });
 };
 
+// 알림 수정이 없을 시에 기본 값으로 설정 추가
+export const ensureUserSetting = async (user_id) => {
+    return await prisma.userNotificationSetting.upsert({
+        where: { user_id: BigInt(user_id)},
+        update: {},
+        create: {
+            user_id: BigInt(user_id),
+            notify_mask: 0,
+            enabled: false
+        }
+    })
+}
+
 // 마이페이지 설정 조회
 export const getMySettings = async (user_id) => {
     return await prisma.userNotificationSetting.findUnique({

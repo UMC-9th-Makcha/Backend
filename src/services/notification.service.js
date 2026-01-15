@@ -8,6 +8,9 @@ export const registerNotification = async (body) => {
     const data = bodyToNotification(body);
     const currentTime = new Date();
 
+    // 유저가 마이페이지에서 알림 수정을 하지 않는다면 기본 값으로 DB 저장
+    await notiRepo.ensureUserSetting(data.user_id);
+
     // 막차까지 남은 시간 계산하기
     const diffMin = Math.floor((data.scheduled - currentTime) / 60000);
 
@@ -38,6 +41,26 @@ const getBitByTime = (min) => {
 }
 
 // 마이페이지 (커스텀 설정)
+export const getMySettings = async (user_id) => {
+    const settings = await notiRepo.getMySettings(user_id);
+
+    if (!settings) {
+        // 설정이 아예 없는 유저라면 기본값 반환 혹은 에러 처리
+        throw new CustomError(
+            "NOTI-404-002",
+            "알림 설정 정보를 찾을 수 없습니다.",
+            "/api/alerts/settings"
+        );
+    }
+
+    // BigInt 등이 포함될 수 있으므로 필요한 데이터만 정리해서 반환
+    return {
+        user_id: String(settings.user_id),
+        notify_mask: settings.notify_mask,
+        enabled: settings.enabled
+    };
+};
+
 export const updateSettings = async (user_id, timeList) => {
     if (!timeList || timeList.length === 0) {
         return await notiRepo.updateSettings(user_id, { notify_mask: 0, enabled: false });
