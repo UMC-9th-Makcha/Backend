@@ -1,9 +1,9 @@
-// src/repositories/myPlace.repository.js
+// src/repositories/place.repository.js
 
 import { prisma } from '../config/prisma.js';
 
 // create
-export const insertMyPlace = async (data) => {
+export const insertPlace = async (data) => {
   return prisma.myPlace.create({
     data: {
       user: { connect: { user_id: BigInt(data.user_id) } },
@@ -29,23 +29,25 @@ export const insertMyPlace = async (data) => {
 };
 
 // update(PATCH)
-export const patchMyPlace = async ({ myplace_id, user_id, data }) => {
+export const patchPlace = async ({ myplace_id, user_id, data }) => {
+  // - user_id 필수
+  // - 단건 PATCH
+  // - 존재하지 않거나 권한 없으면 count = 0
   return prisma.myPlace.updateMany({
     where: {
       myplace_id: BigInt(myplace_id),
       user_id: BigInt(user_id),
-      deleted_at: null,
     },
     data,
   });
 };
 
-export const findMyPlace = async ({ myplace_id, user_id }) => {
+// update 성공 후 최신 row 반환용
+export const findPlace = async ({ myplace_id, user_id }) => {
   return prisma.myPlace.findFirst({
     where: {
       myplace_id: BigInt(myplace_id),
       user_id: BigInt(user_id),
-      deleted_at: null,
     },
     select: {
       myplace_id: true,
@@ -58,6 +60,16 @@ export const findMyPlace = async ({ myplace_id, user_id }) => {
       longitude: true,
       created_at: true,
       updated_at: true,
+    },
+  });
+};
+
+// delete
+export const deletePlace = async ({ myplace_id, user_id }) => {
+  return prisma.myPlace.deleteMany({
+    where: {
+      myplace_id: BigInt(myplace_id),
+      user_id: BigInt(user_id),
     },
   });
 };

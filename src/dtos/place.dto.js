@@ -1,13 +1,12 @@
-// src/dtos/myPlace.dto.js
+// src/dtos/place.dto.js
 import { CustomError } from "../response/customError.js";
 
 const isNumber = (v) => typeof v === "number" && Number.isFinite(v);
 
 // create
-export const toCreateMyPlaceDto = (req) => {
+export const toCreatePlaceDto = (req) => {
     // 입력값
      const {
-        place_type,
         provider_place_id = null,
         place_address,
         place_detail_address = null,
@@ -28,19 +27,6 @@ export const toCreateMyPlaceDto = (req) => {
             {
                 field: "provider_place_id",
                 maxLength: 50,
-            }
-        );
-    }
-
-    // place_type: 자주가는장소 CRUD면 PLACE만 받는 걸로 강제
-    if (place_type !== "PLACE") {
-        throw new CustomError(
-            "PLACE-400-001",
-            "Invalid place_type",
-            req.originalUrl,
-            {
-                field: "place_type",
-                allowed: ["PLACE"],
             }
         );
     }
@@ -103,7 +89,7 @@ export const toCreateMyPlaceDto = (req) => {
     if (!isNumber(longitude) || longitude < -180 || longitude > 180) {
         throw new CustomError(
             "PLACE-400-001",
-            "Invalid latitude",
+            "Invalid longitude",
             req.originalUrl,
             {
                 field: "longitude",
@@ -113,7 +99,6 @@ export const toCreateMyPlaceDto = (req) => {
     }
 
     return {
-        place_type,
         provider_place_id,
         place_address: place_address.trim(),
         place_detail_address: place_detail_address === "" ? null : place_detail_address,
@@ -123,9 +108,8 @@ export const toCreateMyPlaceDto = (req) => {
 };
 
 // update(PATCH)
-export const toUpdateMyPlaceDto = (req) => {
+export const toUpdatePlaceDto = (req) => {
     const {
-        place_type, // 들어오면 에러
         provider_place_id,
         place_address,
         place_detail_address,
@@ -133,17 +117,6 @@ export const toUpdateMyPlaceDto = (req) => {
         longitude,
     } = req.body ?? {};
 
-    // place_type: PLACE 고정, 업데이트 불가능
-    if (place_type !== undefined) {
-        throw new CustomError(
-            "PLACE-400-001",
-            "place_type cannot be updated",
-            req.originalUrl,
-            {
-                field: "place_type"
-            }
-        );
-    }
 
     const dto = {};
 
