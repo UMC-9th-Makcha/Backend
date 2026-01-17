@@ -1,9 +1,8 @@
-import createApp from './app.js';
+import app from './app.js';
 import dotenv from "dotenv";
 dotenv.config();
 console.log("KAKAO KEY:", process.env.KAKAO_REST_API_KEY);
 const PORT = process.env.PORT || 3000;
-const app = createApp();
 
 const startServer = async () => {
   try {

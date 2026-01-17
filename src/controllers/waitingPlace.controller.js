@@ -1,7 +1,8 @@
 import { WaitingPlaceSearchDto } from '../dtos/request/waitingPlaceSearch.dto.js';
 import { DirectionsDto } from '../dtos/request/directions.dto.js';
-import { successResponse, errorResponse } from '../response/apiResponse.js';
 import { DeepLinkDto } from '../dtos/request/deepLink.dto.js';
+import { CustomSuccess } from '../utils/customSuccess.js'; 
+import { CustomError } from '../utils/customError.js'; 
 
 class WaitingPlaceController {
   constructor(waitingPlaceService) {
@@ -18,14 +19,26 @@ class WaitingPlaceController {
 
       const errors = searchDto.validate();
       if (errors.length > 0) {
-        return res.status(400).json(
-          errorResponse('INVALID_PARAMETERS', '요청 파라미터가 유효하지 않습니다.', errors)
+        // CustomError 사용
+        throw new CustomError(
+          'COM-400-001',
+          '요청 파라미터가 유효하지 않습니다',
+          '/api/v1/waiting-places',
+          { validationErrors: errors }
         );
       }
 
       const result = await this.service.findNearbyPlaces(searchDto);
 
-      return res.status(200).json(successResponse(result));
+      // CustomSuccess 사용
+      const response = new CustomSuccess(
+        'MAP-200-001',
+        200,
+        '대기 장소 조회 성공',
+        result
+      );
+
+      return res.status(response.statusCode).json(response);
     } catch (error) {
       next(error);
     }
@@ -45,14 +58,26 @@ class WaitingPlaceController {
 
       const errors = directionsDto.validate();
       if (errors.length > 0) {
-        return res.status(400).json(
-          errorResponse('INVALID_PARAMETERS', '요청 파라미터가 유효하지 않습니다.', errors)
+        // CustomError 사용
+        throw new CustomError(
+          'COM-400-001',
+          '요청 파라미터가 유효하지 않습니다',
+          `/api/v1/waiting-places/${req.params.placeId}/directions`,
+          { validationErrors: errors }
         );
       }
 
       const result = await this.service.getDirections(directionsDto);
 
-      return res.status(200).json(successResponse(result));
+      // CustomSuccess 사용
+      const response = new CustomSuccess(
+        'MAP-200-003',
+        200,
+        '길찾기 정보 조회 성공',
+        result
+      );
+
+      return res.status(response.statusCode).json(response);
     } catch (error) {
       next(error);
     }
@@ -67,47 +92,71 @@ class WaitingPlaceController {
       const { placeId } = req.params;
 
       if (!placeId) {
-        return res.status(400).json(
-          errorResponse('INVALID_PARAMETERS', '장소 ID가 필요합니다.')
+        // CustomError 사용
+        throw new CustomError(
+          'COM-400-001',
+          '장소 ID가 필요합니다',
+          `/api/v1/waiting-places/${placeId}`
         );
       }
 
       const result = await this.service.getPlaceDetail(placeId);
 
-      return res.status(200).json(successResponse(result));
+      // CustomSuccess 사용
+      const response = new CustomSuccess(
+        'MAP-200-002',
+        200,
+        '장소 상세 조회 성공',
+        result
+      );
+
+      return res.status(response.statusCode).json(response);
     } catch (error) {
       next(error);
     }
   }
-   /*
+
+  /*
    - 카카오맵 딥링크 생성
    - GET /api/v1/waiting-places/:placeId/deeplink
    */
   async getDeepLink(req, res, next) {
-  try {
-    const deepLinkDto = new DeepLinkDto({
-      placeId: req.params.placeId,
-      fromLat: req.query.fromLat,
-      fromLng: req.query.fromLng,
-      toLat: req.query.toLat,
-      toLng: req.query.toLng,
-      placeName: req.query.placeName
-    });
+    try {
+      const deepLinkDto = new DeepLinkDto({
+        placeId: req.params.placeId,
+        fromLat: req.query.fromLat,
+        fromLng: req.query.fromLng,
+        toLat: req.query.toLat,
+        toLng: req.query.toLng,
+        placeName: req.query.placeName
+      });
 
-    const errors = deepLinkDto.validate();
-    if (errors.length > 0) {
-      return res.status(400).json(
-        errorResponse('INVALID_PARAMETERS', '요청 파라미터가 유효하지 않습니다.', errors)
+      const errors = deepLinkDto.validate();
+      if (errors.length > 0) {
+        // CustomError 사용
+        throw new CustomError(
+          'COM-400-001',
+          '요청 파라미터가 유효하지 않습니다',
+          `/api/v1/waiting-places/${req.params.placeId}/deeplink`,
+          { validationErrors: errors }
+        );
+      }
+
+      const result = await this.service.getDeepLink(deepLinkDto);
+
+      // CustomSuccess 사용
+      const response = new CustomSuccess(
+        'MAP-200-004',
+        200,
+        '카카오맵 딥링크 생성 성공',
+        result
       );
+
+      return res.status(response.statusCode).json(response);
+    } catch (error) {
+      next(error);
     }
-
-    const result = await this.service.getDeepLink(deepLinkDto);
-
-    return res.status(200).json(successResponse(result));
-  } catch (error) {
-    next(error);
-  }
   }
 }
 
-export default WaitingPlaceController;  
+export default WaitingPlaceController;

@@ -1,5 +1,6 @@
 import { WaitingPlaceResponseDto } from '../dtos/response/waitingPlace.dto.js';
 import { appConfig } from '../config/app.config.js';
+import { CustomError } from '../utils/customError.js'; 
 
 class WaitingPlaceService {
   constructor(kakaoClient, distanceUtil, timeUtil) {
@@ -9,29 +10,85 @@ class WaitingPlaceService {
   }
 
   async getDeepLink(deepLinkDto) {
-  try {
-    // 카카오맵 딥링크 URL 생성 (장소 조회 없이 바로 생성)
-    const deepLink = `kakaomap://route?sp=${deepLinkDto.fromLat},${deepLinkDto.fromLng}&ep=${deepLinkDto.toLat},${deepLinkDto.toLng}&by=FOOT`;
+    try {
+      // 필수 파라미터 검증
+      if (!deepLinkDto.fromLat || !deepLinkDto.fromLng || !deepLinkDto.toLat || !deepLinkDto.toLng) {
+        throw new CustomError(
+          'COM-400-001',
+          '필수 파라미터 누락',
+          '/api/v1/waiting-places/deeplink',
+          { required: ['fromLat', 'fromLng', 'toLat', 'toLng'] }
+        );
+      }
 
-    return {
-      place: {
-        id: deepLinkDto.placeId,
-        name: deepLinkDto.placeName,
-        location: {
-          lat: deepLinkDto.toLat,
-          lng: deepLinkDto.toLng
-        }
-      },
-      deepLink
-    };
-  } catch (error) {
-    throw error;
+      // 좌표 유효성 검증
+      if (!this._isValidCoordinate(deepLinkDto.fromLat, deepLinkDto.fromLng) ||
+          !this._isValidCoordinate(deepLinkDto.toLat, deepLinkDto.toLng)) {
+        throw new CustomError(
+          'MAP-400-001',
+          '잘못된 좌표값',
+          '/api/v1/waiting-places/deeplink',
+          { 
+            from: { lat: deepLinkDto.fromLat, lng: deepLinkDto.fromLng },
+            to: { lat: deepLinkDto.toLat, lng: deepLinkDto.toLng }
+          }
+        );
+      }
+
+      // 카카오맵 딥링크 URL 생성
+      const deepLink = `kakaomap://route?sp=${deepLinkDto.fromLat},${deepLinkDto.fromLng}&ep=${deepLinkDto.toLat},${deepLinkDto.toLng}&by=FOOT`;
+
+      // 성공 시 데이터만 반환 (success 객체 X)
+      return {
+        place: {
+          id: deepLinkDto.placeId,
+          name: deepLinkDto.placeName,
+          location: {
+            lat: deepLinkDto.toLat,
+            lng: deepLinkDto.toLng
+          }
+        },
+        deepLink
+      };
+    } catch (error) {
+      // CustomError는 그대로 throw
+      if (error instanceof CustomError) {
+        throw error;
+      }
+      
+      // 예상치 못한 에러
+      throw new CustomError(
+        'COM-500-001',
+        '서버 내부 오류',
+        '/api/v1/waiting-places/deeplink',
+        { originalError: error.message }
+      );
+    }
   }
-}
 
   async findNearbyPlaces(searchDto) {
     const currentTime = new Date();
     const { lat, lng, category, openOnly, limit } = searchDto;
+
+    // 필수 파라미터 검증
+    if (!lat || !lng) {
+      throw new CustomError(
+        'COM-400-001',
+        '필수 파라미터 누락',
+        '/api/v1/waiting-places',
+        { required: ['lat', 'lng'] }
+      );
+    }
+
+    // 좌표 유효성 검증
+    if (!this._isValidCoordinate(lat, lng)) {
+      throw new CustomError(
+        'MAP-400-001',
+        '잘못된 좌표값',
+        '/api/v1/waiting-places',
+        { lat, lng }
+      );
+    }
 
     try {
       let allPlaces = [];
@@ -91,6 +148,16 @@ class WaitingPlaceService {
         .sort((a, b) => a.distance - b.distance)
         .slice(0, limit);
 
+      // 장소가 없는 경우
+      if (sortedPlaces.length === 0) {
+        throw new CustomError(
+          'MAP-404-001',
+          '주변에 대기 장소가 없습니다',
+          '/api/v1/waiting-places',
+          { searchArea: { lat, lng, radius: appConfig.search.defaultRadius } }
+        );
+      }
+
       const enrichedPlaces = sortedPlaces.map(place => {
         const recommendReason = this._generateRecommendReason(place, currentTime);
         
@@ -101,6 +168,7 @@ class WaitingPlaceService {
         );
       });
 
+      // 성공 시 데이터만 반환
       return {
         places: enrichedPlaces,
         totalCount: enrichedPlaces.length
@@ -108,25 +176,62 @@ class WaitingPlaceService {
 
     } catch (error) {
       console.error('[WaitingPlaceService] findNearbyPlaces error:', error);
-      throw error;
+      
+      // CustomError는 그대로 throw
+      if (error instanceof CustomError) {
+        throw error;
+      }
+
+      // 카카오 API 에러
+      if (error.response) {
+        throw new CustomError(
+          'MAP-500-001',
+          '카카오 API 오류',
+          '/api/v1/waiting-places',
+          { 
+            apiError: error.response.data?.message || error.message,
+            statusCode: error.response.status 
+          }
+        );
+      }
+
+      // 예상치 못한 에러
+      throw new CustomError(
+        'COM-500-001',
+        '서버 내부 오류',
+        '/api/v1/waiting-places',
+        { originalError: error.message }
+      );
     }
   }
 
   async getPlaceDetail(placeId) {
+    // 필수 파라미터 검증
+    if (!placeId) {
+      throw new CustomError(
+        'COM-400-001',
+        '장소 ID가 필요합니다',
+        `/api/v1/waiting-places/${placeId}`
+      );
+    }
+
     try {
       const place = await this.kakaoClient.getPlaceDetail(placeId);
       
       if (!place) {
-        const error = new Error('대기 장소를 찾을 수 없습니다.');
-        error.code = 'PLACE_NOT_FOUND';
-        error.statusCode = 404;
-        throw error;
+        throw new CustomError(
+          'MAP-404-001',
+          '대기 장소를 찾을 수 없습니다',
+          `/api/v1/waiting-places/${placeId}`,
+          { placeId }
+        );
       }
 
       const currentTime = new Date();
       const recommendReason = this._generateRecommendReason(place, currentTime);
       const kakaoMapUrl = this._generateKakaoMapDeepLink(place);
 
+      // 성공 시 데이터만 반환
       return {
         ...new WaitingPlaceResponseDto(
           { ...place, recommendReason },
@@ -143,21 +248,65 @@ class WaitingPlaceService {
 
     } catch (error) {
       console.error('[WaitingPlaceService] getPlaceDetail error:', error);
-      throw error;
+      
+      // CustomError는 그대로 throw
+      if (error instanceof CustomError) {
+        throw error;
+      }
+
+      // 카카오 API 에러
+      if (error.response) {
+        throw new CustomError(
+          'MAP-500-001',
+          '카카오 API 오류',
+          `/api/v1/waiting-places/${placeId}`,
+          { apiError: error.message }
+        );
+      }
+
+      // 예상치 못한 에러
+      throw new CustomError(
+        'COM-500-001',
+        '서버 내부 오류',
+        `/api/v1/waiting-places/${placeId}`,
+        { originalError: error.message }
+      );
     }
   }
 
   async getDirections(directionsDto) {
     const { placeId, fromLat, fromLng } = directionsDto;
 
+    // 필수 파라미터 검증
+    if (!placeId || !fromLat || !fromLng) {
+      throw new CustomError(
+        'COM-400-001',
+        '필수 파라미터 누락',
+        `/api/v1/waiting-places/${placeId}/directions`,
+        { required: ['placeId', 'fromLat', 'fromLng'] }
+      );
+    }
+
+    // 좌표 유효성 검증
+    if (!this._isValidCoordinate(fromLat, fromLng)) {
+      throw new CustomError(
+        'MAP-400-001',
+        '잘못된 좌표값',
+        `/api/v1/waiting-places/${placeId}/directions`,
+        { lat: fromLat, lng: fromLng }
+      );
+    }
+
     try {
       const place = await this.kakaoClient.getPlaceDetail(placeId);
       
       if (!place) {
-        const error = new Error('대기 장소를 찾을 수 없습니다.');
-        error.code = 'PLACE_NOT_FOUND';
-        error.statusCode = 404;
-        throw error;
+        throw new CustomError(
+          'MAP-404-001',
+          '대기 장소를 찾을 수 없습니다',
+          `/api/v1/waiting-places/${placeId}/directions`,
+          { placeId }
+        );
       }
 
       const distance = this.distanceUtil.calculate(
@@ -171,6 +320,7 @@ class WaitingPlaceService {
         place
       );
 
+      // 성공 시 데이터만 반환
       return {
         distance: Math.round(distance),
         estimatedDuration,
@@ -192,8 +342,43 @@ class WaitingPlaceService {
 
     } catch (error) {
       console.error('[WaitingPlaceService] getDirections error:', error);
-      throw error;
+      
+      // CustomError는 그대로 throw
+      if (error instanceof CustomError) {
+        throw error;
+      }
+
+      // 카카오 API 에러
+      if (error.response) {
+        throw new CustomError(
+          'MAP-404-002',
+          '경로 탐색 실패',
+          `/api/v1/waiting-places/${placeId}/directions`,
+          { apiError: error.message }
+        );
+      }
+
+      // 예상치 못한 에러
+      throw new CustomError(
+        'COM-500-001',
+        '서버 내부 오류',
+        `/api/v1/waiting-places/${placeId}/directions`,
+        { originalError: error.message }
+      );
     }
+  }
+
+  // 좌표 유효성 검증 헬퍼 메서드 추가
+  _isValidCoordinate(lat, lng) {
+    const latitude = parseFloat(lat);
+    const longitude = parseFloat(lng);
+    
+    return !isNaN(latitude) && 
+           !isNaN(longitude) && 
+           latitude >= -90 && 
+           latitude <= 90 && 
+           longitude >= -180 && 
+           longitude <= 180;
   }
 
   _generateKakaoMapDeepLink(place) {
