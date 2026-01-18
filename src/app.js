@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser"; //쿠키 파싱
 
 import notificationRouter from "./routes/notification.route.js";
 import authRouter from "./routes/auth.route.js";
+import placeRouter from './routes/myPlace.route.js';
 import { globalErrorHandler } from "./middleware/error.middleware.js";
 
 const app = express();
@@ -21,6 +22,7 @@ app.use(cors({
 //라우터
 app.use("/api/alerts", notificationRouter);
 app.use('/auth', authRouter);
+app.use("/api", placeRouter);
 
 app.get("/", (req, res) => {
   res.send("server on");
