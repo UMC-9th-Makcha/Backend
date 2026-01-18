@@ -28,8 +28,4 @@ app.get("/", (req, res) => {
   res.send("server on");
 });
 
-
-//에러 핸들러
-app.use(globalErrorHandler);
-
 export default app;
