@@ -106,3 +106,24 @@ export const deleteHomeByUserId = async ({ user_id }) => {
     },
   });
 };
+
+// GET /api/myplaces 용: user_id 기준 전체 조회(HOME + PLACE)
+export const findMyPlacesByUserId = async ({ user_id }) => {
+  return prisma.myPlace.findMany({
+    where: {
+      user_id: BigInt(user_id),
+    },
+    select: {
+      myplace_id: true,
+      user_id: true,
+      place_type: true,
+      provider_place_id: true,
+      place_address: true,
+      place_detail_address: true,
+      latitude: true,
+      longitude: true,
+      created_at: true,
+      updated_at: true,
+    },
+  });
+};

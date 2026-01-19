@@ -13,10 +13,10 @@ export const upsertHomeHandler = async(req, res, next) => {
             e.statusCode = 401;
             throw e;
         }
-        const userIdBigint = BigInt(userId);
+        //const userIdBigint = BigInt(userId);
 
         // 서비스 호출
-        const home = await upsertHomeMyPlace(userIdBigint, req.body);
+        const home = await upsertHomeMyPlace(userId, req.body);
 
         // 응답
         return res.status(200).json(

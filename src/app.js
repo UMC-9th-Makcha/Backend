@@ -7,6 +7,7 @@ import notificationRouter from "./routes/notification.route.js";
 import authRouter from "./routes/auth.route.js";
 import placeRouter from './routes/myPlace.route.js';
 import homeRouter from './routes/home.route.js';
+import myplacesRouter from "./routes/myplaces.route.js";
 import { globalErrorHandler } from "./middleware/error.middleware.js";
 
 const app = express();
@@ -24,6 +25,7 @@ app.use(cors({
 app.use("/api/alerts", notificationRouter);
 app.use('/auth', authRouter);
 app.use("/api/myplaces/home", homeRouter);
+app.use("/api/myplaces", myplacesRouter);
 app.use("/api", placeRouter);
 
 app.get("/", (req, res) => {

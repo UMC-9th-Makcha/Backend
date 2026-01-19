@@ -81,7 +81,11 @@ export const upsertHomeMyPlace = async (user_id, data) => {
             longitude: data.longitude,
         });
 
-        return created;
+        return {
+            ...created,
+            myplace_id: String(created.myplace_id),
+            user_id: String(created.user_id),
+        };
     } catch (err) {
         if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
             const e = new CustomError(
