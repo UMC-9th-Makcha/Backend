@@ -3,7 +3,8 @@ import { CustomSuccess } from "../response/customSuccess.js";
 import { CustomError } from "../response/customError.js";
 import {
     recordRecentDestination,
-    getRecentDestinations
+    getRecentDestinations,
+    deleteRecentDestination
 } from "../services/recentDestination.service.js";
 import { toRecentDestinationDto } from "../dtos/recentDestination.dto.js";
 
@@ -17,22 +18,22 @@ export const createRecentDestinationHandler = async (req, res, next) => {
     }
 
     const {
-      placeId,
-      title,
-      roadAddress,
-      detailAddress = null,
-      latitude,
-      longitude,
+        placeId,
+        title,
+        roadAddress,
+        detailAddress = null,
+        latitude,
+        longitude,
     } = req.body;
 
     const result = await recordRecentDestination({
-      userId,
-      placeId,
-      title,
-      roadAddress,
-      detailAddress,
-      latitude,
-      longitude,
+        userId,
+        placeId,
+        title,
+        roadAddress,
+        detailAddress,
+        latitude,
+        longitude,
     });
 
     return res.status(200).json(
@@ -88,3 +89,47 @@ export const getRecentDestinationsHandler = async(req, res, next) => {
         return next(err);
     }
 };
+
+export const deleteRecentDestinationHandler = async (req, res, next) => {
+    try {
+        // 유저 확인
+        const userId = req.user.userId;
+        if (!userId) {
+            const e = new CustomError("UNAUTHORIZED", "Unauthorized", req.originalUrl, {});
+            e.statusCode = 401;
+            throw e;
+        }
+
+        // path param - recentId(bigint) JSON/HTTP 경계에서는 string으로 고정
+        const { recentId } = req.params;
+
+        // recentId 검증 - 문자열 존재 여부 확인
+        if (typeof recentId !== "string" || recentId.trim().length === 0) {
+            const e = new CustomError(
+                "RECENT-400-001",
+                "Invalid recentId",
+                req.originalUrl,
+                { recentId }
+            );
+            e.statusCode = 400;
+            throw e;
+        }
+
+        // 서비스 호출
+        await deleteRecentDestination({
+            userId,
+            recentId: recentId.trim(), // string 유지
+        });
+
+        return res.status(200).json(
+            new CustomSuccess(
+                "RECENT_DESTINATION_DELETE_SUCCESS",
+                200,
+                "최근 목적지 삭제 성공",
+                { recentId: recentId.trim() }
+            )
+        );
+    } catch (err) {
+        next(err);
+    }
+}
