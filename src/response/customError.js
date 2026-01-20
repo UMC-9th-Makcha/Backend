@@ -17,3 +17,5 @@ export class CustomError {
 // NOTI-404-001 알림 정보 없음
 // COM-400-001 필수 파라미터 누락
 // COM-500-001 서버 내부 오류
+// RECENT-400-001 잘못된 recentId
+// RECENT-404-001 최근 목적지 정보 없음
