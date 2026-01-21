@@ -16,7 +16,7 @@ app.use(cookieParser());
 
 // CORS - 쿠키 전송 필수
 app.use(cors({
-  origin: 'http://localhost:3000', // FE 주소(아직 배포 전임으로 로컬로 놓음)
+  origin: true, // 요청 origin 그대로 허용, 쿠키 인증 + HTTPS + Nginx 환경에서 안정. 아직 웹배포 전이므로.
   credentials: true,
 }));
 
@@ -28,6 +28,16 @@ app.use("/api", placeRouter);
 
 app.get("/", (req, res) => {
   res.send("server on");
+});
+
+
+//health 엔드포인트 추가. CORS 설정을 "운영 기준"으로 정리했습니다.
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
 });
 
 export default app;

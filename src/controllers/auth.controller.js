@@ -21,7 +21,7 @@ const kakaoLogin = async (req, res, next) => {
       // Refresh Token 쿠키 저장
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: true,
         sameSite: 'none',
       });
   
@@ -55,7 +55,7 @@ const kakaoLogin = async (req, res, next) => {
   
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: true,
         sameSite: 'none',
       });
   
@@ -82,7 +82,7 @@ const logout = async (req, res, next) => {
     // refreshToken 쿠키 삭제
     res.clearCookie('refreshToken', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true,
       sameSite: 'none',
     });
 
@@ -108,7 +108,7 @@ const withdraw = async (req, res, next) => {
     // refreshToken 쿠키 삭제
     res.clearCookie('refreshToken', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true,
       sameSite: 'none',
     });
 
