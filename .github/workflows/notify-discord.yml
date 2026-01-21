@@ -1,0 +1,52 @@
+name: Notify Discord on Backend Changes
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send notification to Discord
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+          -d '{
+            "embeds": [
+              {
+                "title": "📦 Makcha Backend 변경사항 발생",
+                "color": 15105570,
+                "fields": [
+                  {
+                    "name": "이벤트",
+                    "value": "${{ github.event_name }}",
+                    "inline": true
+                  },
+                  {
+                    "name": "브랜치",
+                    "value": "${{ github.ref_name }}",
+                    "inline": true
+                  },
+                  {
+                    "name": "커밋",
+                    "value": "${{ github.sha }}",
+                    "inline": false
+                  },
+                  {
+                    "name": "작성자",
+                    "value": "${{ github.actor }}",
+                    "inline": true
+                  }
+                ],
+                "footer": {
+                  "text": "Makcha Backend GitHub 알림"
+                }
+              }
+            ]
+          }' \
+          ${{ secrets.DISCORD_WEBHOOK_URL }}
