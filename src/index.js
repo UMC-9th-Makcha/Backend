@@ -1,8 +1,6 @@
 import app from './app.js';
-//import dotenv from "dotenv"; //도커에서 불안정.
-dotenv.config({
-  path: "/app/.env"
-});
+import 'dotenv/config'; //dotenv 자동 로그가 되도록 수정함.
+
 console.log("KAKAO KEY:", process.env.KAKAO_REST_API_KEY);
 const PORT = process.env.PORT || 3000;
 
