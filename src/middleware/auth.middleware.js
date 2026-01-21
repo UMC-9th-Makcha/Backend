@@ -3,7 +3,10 @@ import { CustomError } from '../response/customError.js';
 
 //로그인된 사용자만 접근 가능
 export const isLoggedIn = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith("Bearer ")
+    ? authHeader.split(" ")[1]
+    : null;
 
   if (!token) {
     throw new CustomError(
@@ -28,15 +31,23 @@ export const isLoggedIn = (req, res, next) => {
 
 // 로그인되지 않은 사용자만 접근 가능 (회원가입/소셜 로그인)
 export const isNotLoggedIn = (req, res, next) => {
-  const token = req.headers.authorization;
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return next();
 
-  if (token) {
+  const token = authHeader.startsWith("Bearer ")
+    ? authHeader.split(" ")[1]
+    : null;
+
+  if (!token) return next();
+
+  try {
+    jwt.verify(token, process.env.JWT_SECRET);
     throw new CustomError(
       'AUTH-403-001',
       '이미 로그인된 사용자입니다.',
       req.originalUrl
     );
+  } catch {
+    return next(); // 토큰이 만료됐으면 로그인 허용
   }
-
-  next();
 };

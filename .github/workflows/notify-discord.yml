@@ -1,0 +1,85 @@
+name: Notify Discord on Backend Changes
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ✅ 반드시 필요 (git log 사용을 위해)
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Send notification to Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          # 커밋 링크
+          COMMIT_URL="https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
+
+          # 커밋 메시지 (한 줄 요약)
+          COMMIT_MESSAGE="$(git log -1 --pretty=%s)"
+
+          # PR 정보 처리
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            PR_TITLE="${{ github.event.pull_request.title }}"
+            PR_URL="${{ github.event.pull_request.html_url }}"
+            PR_FIELD="[${PR_TITLE}](${PR_URL})"
+          else
+            PR_FIELD="없음"
+          fi
+
+          # 디스코드 알림 전송
+          curl -X POST -H "Content-Type: application/json" \
+          -d "{
+            \"content\": \"@everyone\",
+            \"embeds\": [
+              {
+                \"title\": \"📦 Makcha Backend 변경사항 발생\",
+                \"color\": 15105570,
+                \"fields\": [
+                  {
+                    \"name\": \"이벤트\",
+                    \"value\": \"${{ github.event_name }}\",
+                    \"inline\": true
+                  },
+                  {
+                    \"name\": \"브랜치\",
+                    \"value\": \"${{ github.ref_name }}\",
+                    \"inline\": true
+                  },
+                  {
+                    \"name\": \"커밋\",
+                    \"value\": \"[${{ github.sha }}](${COMMIT_URL})\",
+                    \"inline\": false
+                  },
+                  {
+                    \"name\": \"커밋 메시지\",
+                    \"value\": \"${COMMIT_MESSAGE}\",
+                    \"inline\": false
+                  },
+                  {
+                    \"name\": \"PR\",
+                    \"value\": \"${PR_FIELD}\",
+                    \"inline\": false
+                  },
+                  {
+                    \"name\": \"작성자\",
+                    \"value\": \"${{ github.actor }}\",
+                    \"inline\": true
+                  }
+                ],
+                \"footer\": {
+                  \"text\": \"Makcha Backend GitHub 알림\"
+                }
+              }
+            ]
+          }" \
+          $DISCORD_WEBHOOK_URL

@@ -1,0 +1,49 @@
+name: Deploy Makcha Backend
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY_BASE64 }}" | base64 -d > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to EC2
+        run: |
+          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            set -e
+
+            cd ~/makcha-backend
+
+            echo "📌 Sync with GitHub develop"
+            git fetch origin
+            git reset --hard origin/develop
+
+            echo "📦 Stop containers"
+            docker-compose down
+
+            echo "🔨 Build new image"
+            docker-compose build --no-cache
+
+            echo "🚀 Start containers"
+            docker-compose up -d
+          EOF
+
+      - name: Verify deployment
+        run: |
+          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            echo "🔍 Verify latest code"
+            docker exec makcha-backend ls src/middleware | grep rateLimit
+          EOF

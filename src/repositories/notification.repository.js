@@ -1,9 +1,9 @@
-import { prisma } from "../config/db.config.js";
+import { prisma } from '../config/prisma.js';  //경로 수정 작업을 진행함.
 
 //알림 생성
 export const addNotification = async (data) => {
     try {
-        const notification = await prisma.mission.create({
+        const notification = await prisma.mission.create({ //프리즈마 불일치 문제 발생.
             data: {
                 user: {connect: { id: data.user_id }},
                 route_id: data_route.id,
