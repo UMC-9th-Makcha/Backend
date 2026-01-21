@@ -13,13 +13,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ✅ 반드시 필요 (git log 사용을 위해)
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Send notification to Discord
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
+          # 커밋 링크
           COMMIT_URL="https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
 
-          # 커밋 메시지 (한 줄)
+          # 커밋 메시지 (한 줄 요약)
           COMMIT_MESSAGE="$(git log -1 --pretty=%s)"
 
           # PR 정보 처리
@@ -31,6 +36,7 @@ jobs:
             PR_FIELD="없음"
           fi
 
+          # 디스코드 알림 전송
           curl -X POST -H "Content-Type: application/json" \
           -d "{
             \"content\": \"@everyone\",
