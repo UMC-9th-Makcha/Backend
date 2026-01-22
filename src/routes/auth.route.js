@@ -35,10 +35,6 @@ const router = Router();
  *     responses:
  *       200:
  *         description: 카카오 로그인 성공
- *         content:
- *           application/json:
- *             schema:
- *               $ref: "#/components/schemas/SuccessResponse"
  *       400:
  *         description: code 누락
  *       401:

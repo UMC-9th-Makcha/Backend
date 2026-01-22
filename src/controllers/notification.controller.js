@@ -28,7 +28,7 @@ export const createNotification = async (req, res, next) => {
         });
 
         await recordRecentDestination({
-            userId,
+            userId: user_id,
             placeId: req.body.placeId,
             title: req.body.title,
             roadAddress: req.body.roadAddress,
@@ -38,7 +38,7 @@ export const createNotification = async (req, res, next) => {
         });
 
         const response = new CustomSuccess(
-            "NOTI-200-001",
+            "NOTI-201-001",
             200,
             "막차 알림 예약이 완료되었습니다.",
             toSafeJSON(result)
