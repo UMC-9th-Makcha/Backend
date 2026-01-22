@@ -1,0 +1,136 @@
+name: Notify Discord on Backend Changes
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Send notification to Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          set -euo pipefail
+
+          EVENT="${{ github.event_name }}"
+          ACTOR="${{ github.actor }}"
+          REPO="${{ github.repository }}"
+
+          # -----------------------------
+          # PUSH
+          # -----------------------------
+          if [ "$EVENT" = "push" ]; then
+            COMMIT_URL="https://github.com/$REPO/commit/${{ github.sha }}"
+            COMMIT_MESSAGE="$(git log -1 --pretty=%s)"
+
+            curl -sS -H "Content-Type: application/json" -X POST \
+            -d @- "$DISCORD_WEBHOOK_URL" <<EOF
+          {
+            "embeds": [{
+              "title": "🚀 [PUSH] Makcha Backend",
+              "color": 3066993,
+              "fields": [
+                { "name": "👤 Author", "value": "$ACTOR", "inline": true },
+                { "name": "🌿 Branch", "value": "${{ github.ref_name }}", "inline": true },
+                { "name": "📝 Commit", "value": "[$COMMIT_MESSAGE]($COMMIT_URL)" }
+              ],
+              "footer": { "text": "Makcha Backend GitHub Notification" }
+            }]
+          }
+          EOF
+            exit 0
+          fi
+
+          # -----------------------------
+          # PULL REQUEST
+          # -----------------------------
+          if [ "$EVENT" = "pull_request" ]; then
+            PR_TITLE="${{ github.event.pull_request.title }}"
+            PR_URL="${{ github.event.pull_request.html_url }}"
+
+            curl -sS -H "Content-Type: application/json" -X POST \
+            -d @- "$DISCORD_WEBHOOK_URL" <<EOF
+          {
+            "embeds": [{
+              "title": "🧩 [PR] Makcha Backend",
+              "color": 15105570,
+              "fields": [
+                { "name": "👤 Author", "value": "$ACTOR", "inline": true },
+                { "name": "📌 PR", "value": "[$PR_TITLE]($PR_URL)" },
+                { "name": "🌿 Branch", "value": "${{ github.head_ref }} → ${{ github.base_ref }}" }
+              ],
+              "footer": { "text": "Makcha Backend GitHub Notification" }
+            }]
+          }
+          EOF
+            exit 0
+          fi
+
+          # -----------------------------
+          # PR REVIEW
+          # -----------------------------
+          if [ "$EVENT" = "pull_request_review" ]; then
+            PR_TITLE="${{ github.event.pull_request.title }}"
+            PR_URL="${{ github.event.pull_request.html_url }}"
+            REVIEW_STATE="${{ github.event.review.state }}"
+
+            curl -sS -H "Content-Type: application/json" -X POST \
+            -d @- "$DISCORD_WEBHOOK_URL" <<EOF
+          {
+            "embeds": [{
+              "title": "💬 [REVIEW] Makcha Backend",
+              "color": 15844367,
+              "fields": [
+                { "name": "👤 Reviewer", "value": "$ACTOR", "inline": true },
+                { "name": "📌 PR", "value": "[$PR_TITLE]($PR_URL)" },
+                { "name": "✅ Review State", "value": "$REVIEW_STATE" }
+              ],
+              "footer": { "text": "Makcha Backend GitHub Notification" }
+            }]
+          }
+          EOF
+            exit 0
+          fi
+
+          # -----------------------------
+          # REVIEW COMMENT
+          # -----------------------------
+          if [ "$EVENT" = "pull_request_review_comment" ]; then
+            PR_TITLE="${{ github.event.pull_request.title }}"
+            PR_URL="${{ github.event.pull_request.html_url }}"
+            COMMENT="${{ github.event.comment.body }}"
+
+            # 코멘트 너무 길면 컷 (디스코드 제한 대비)
+            COMMENT="$(echo "$COMMENT" | head -c 800)"
+
+            curl -sS -H "Content-Type: application/json" -X POST \
+            -d @- "$DISCORD_WEBHOOK_URL" <<EOF
+          {
+            "embeds": [{
+              "title": "💭 [COMMENT] Makcha Backend",
+              "color": 10181046,
+              "fields": [
+                { "name": "👤 Commenter", "value": "$ACTOR", "inline": true },
+                { "name": "📌 PR", "value": "[$PR_TITLE]($PR_URL)" },
+                { "name": "💬 Comment", "value": "$COMMENT" }
+              ],
+              "footer": { "text": "Makcha Backend GitHub Notification" }
+            }]
+          }
+          EOF
+            exit 0
+          fi
+
+          echo "No matching event to notify."
