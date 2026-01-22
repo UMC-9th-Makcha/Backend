@@ -12,6 +12,9 @@ RUN npm ci --omit=dev --no-progress
 # Copy Source Code
 COPY . .
 
+# 프리즈마 클라이언트 생성
+RUN npx prisma generate
+
 # Expose Port
 EXPOSE 3000
 
