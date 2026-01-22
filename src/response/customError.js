@@ -17,3 +17,7 @@ export class CustomError {
 // NOTI-404-001 알림 정보 없음
 // COM-400-001 필수 파라미터 누락
 // COM-500-001 서버 내부 오류
+
+
+// SAVEREPORT-200-001 세이브 리포트 조회 성공
+// SAVEREPORT-400-001 잘못된 month 파라미터

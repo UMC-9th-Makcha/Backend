@@ -7,6 +7,7 @@ import cookieParser from "cookie-parser"; //쿠키 파싱
 //아예 이 알림은 현재 제외 후 배포하겠습니다:)
 import authRouter from "./routes/auth.route.js";
 import placeRouter from './routes/myPlace.route.js';
+import saveReportRouter from "./routes/saveReports.route.js";
 import { globalErrorHandler } from "./middleware/error.middleware.js";
 
 const app = express();
@@ -25,6 +26,7 @@ app.use(cors({
 // 아예 이 알림은 현재 제외 후 배포하겠습니다:)
 app.use('/auth', authRouter);
 app.use("/api", placeRouter);
+app.use("/api/save-reports", saveReportRouter);
 
 app.get("/", (req, res) => {
   res.send("server on");
@@ -39,5 +41,8 @@ app.get("/health", (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+//에러 핸들러
+app.use(globalErrorHandler);
 
 export default app;
