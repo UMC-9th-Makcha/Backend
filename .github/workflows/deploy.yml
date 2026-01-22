@@ -65,7 +65,7 @@ jobs:
 
           # 서버 가동 대기.
           echo "⏳ Wait for server warm-up"
-          sleep 5
+          sleep 10
 
           # 컨테이너 실행 여부를 확인
           # 컨테이너 미가동 시 배포 실패 처리를 진행합니다.
@@ -73,12 +73,23 @@ jobs:
           docker ps --format '{{.Names}}' | grep -x makcha-backend
 
           # 애플리케이션 헬스 확인, http 응답 실패시, 배포 실패를 확인.
-          echo "🔍 Health check"
-          curl -f http://localhost:3000 || {
-            echo "❌ Health check failed"
+          echo "🔍 Health check (retry up to 30s)"
+          HEALTH_CHECK_PASSED=false
+          for i in {1..10}; do
+            if curl --fail --retry 3 --retry-connrefused --retry-delay 2 http://localhost:3000; then
+              echo "✅ Health check passed"
+              HEALTH_CHECK_PASSED=true
+              break
+            fi
+            echo "⏳ Waiting for server to be ready... ($i/10)"
+            sleep 3
+          done
+
+          if [ "$HEALTH_CHECK_PASSED" = false ]; then
+            echo "❌ Health check failed after retries"
             docker logs --tail=200 makcha-backend
             exit 1
-          } #curl 실패시 명확한 메시지 제공.
+          fi
           EOF
 
       # 코드 반영 여부 검증
