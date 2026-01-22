@@ -3,6 +3,8 @@ services:
     image: mysql:8.0
     container_name: makcha-mysql
     restart: always # 앱 크래시, 서버 재부팅 시 자동 복구 목적임.
+    env_file:
+      - .env # 환경 변수 경고 오류 해결, .env 한 곳에서 통합 관리.
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
@@ -26,6 +28,7 @@ services:
       - makcha-network # 백엔드, mysql 통신용 브리지 네트워크
 
   backend:
+    image: makcha-backend:latest
     build:
       context: .
       dockerfile: Dockerfile
