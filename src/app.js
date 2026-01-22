@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser"; //쿠키 파싱
+import swaggerUi from "swagger-ui-express";
+import { swaggerSpec } from "./swagger/swagger.js";
 
 
 //import notificationRouter from "./routes/notification.route.js"; -> 서버 오류로 주석처리함. 
@@ -25,8 +27,17 @@ app.use(cors({
 // app.use("/api/alerts", notificationRouter);
 // 아예 이 알림은 현재 제외 후 배포하겠습니다:)
 app.use('/auth', authRouter);
+app.use("/api", recentDestinationRouter);
 app.use("/api", placeRouter);
 app.use("/api/me", myinfoRouter);
+
+
+// Swagger
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec)
+);
 
 app.get("/", (req, res) => {
   res.send("server on");
