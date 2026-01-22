@@ -1,0 +1,89 @@
+diff --git "a/.github/ISSUE_TEMPLATE/\354\235\264\354\212\210-\355\205\234\355\224\214\353\246\277.md" "b/.github/ISSUE_TEMPLATE/\354\235\264\354\212\210-\355\205\234\355\224\214\353\246\277.md"
+new file mode 100644
+index 0000000..f07cc8b
+--- /dev/null
++++ "b/.github/ISSUE_TEMPLATE/\354\235\264\354\212\210-\355\205\234\355\224\214\353\246\277.md"
+@@ -0,0 +1,15 @@
++---
++name: 이슈 템플릿
++about: Describe this issue template's purpose here.
++title: ''
++labels: ''
++assignees: ''
++
++---
++
++### 🚀 Description
++
++### ✅ To do
++- []
++
++### ✏️ Notes
+diff --git a/README.md b/README.md
+index 27cdf8c..c9dbf52 100644
+--- a/README.md
++++ b/README.md
+@@ -106,6 +106,19 @@ src/
+ - feature/{이슈번호}-{기능명}으로 브랜치 파고, develop으로 PR 올려주세요.
+ - 메시지 템플릿/발송 정책 변경은 PRD와 동기화
+ 
++개발 시 커밋 메시지는 아래 타입을 참고해주세요.
++
++| Type      | 의미                                         | 예시                                  |
++|-----------|--------------------------------------------|--------------------------------------|
++| **Feat**  | 새로운 기능 추가                             | feat: 로그인 기능 추가                |
++| **Fix**   | 버그 수정                                   | fix: 회원가입 버그 수정               |
++| **Docs**  | 문서 수정                                   | docs: README 내용 수정                |
++| **Style** | 코드 포맷팅, 공백, 세미콜론 등 (로직 변경 없음) | style: 코드 포맷팅 적용               |
++| **Refactor** | 코드 리팩토링 (기능 변경 없음)            | refactor: 사용자 서비스 리팩토링      |
++| **Test**  | 테스트 코드 작성/수정                        | test: 회원가입 API 테스트 추가        |
++| **Chore** | 빌드/배포/패키지 관련 수정                  | chore: npm 패키지 업데이트           |
++
++
+ ---
+ 
+ ## 8. Getting Started (Local)
+diff --git a/src/controllers/recentDestination.controller.js b/src/controllers/recentDestination.controller.js
+new file mode 100644
+index 0000000..89388f6
+--- /dev/null
++++ b/src/controllers/recentDestination.controller.js
+@@ -0,0 +1,5 @@
++// src/controllers/recentDestination.controller.js
++
++// 임시 코드
++const userId = Number(req.header("x-user-id"));
++if (!userId) return res.status(401).json({ message: "Unauthorized" });
+\ No newline at end of file
+diff --git a/src/repositories/recentDestination.repository.js b/src/repositories/recentDestination.repository.js
+new file mode 100644
+index 0000000..2ef590e
+--- /dev/null
++++ b/src/repositories/recentDestination.repository.js
+@@ -0,0 +1,11 @@
++// src/repositories/recentDestination.repository.js
++
++import { pisma } from './database/prisma.js'; // 경로 수정 필요
++
++export const findRecentDestinations = async (userId, limit) => {
++    return prisma.recentDestination.findMany({
++        where: { userId },
++        orderBy: { usedAt: "desc" },
++        take: limit,
++    });
++};
+\ No newline at end of file
+diff --git a/src/services/recentDestination.service.js b/src/services/recentDestination.service.js
+new file mode 100644
+index 0000000..6353079
+--- /dev/null
++++ b/src/services/recentDestination.service.js
+@@ -0,0 +1,7 @@
++// src/services/recentDestination.service.js
++
++import { findRecentDestinations } from "../repositories/recentDestination.repository";
++
++export const getRecentDestinations = (userId, limit) => {
++    return findRecentDestinations(userId, limit);
++}
+\ No newline at end of file
