@@ -15,4 +15,7 @@ router.get("/settings", notiController.getSettings);
 // 알림 설정 수정
 router.patch("/settings", notiController.updateSettings);
 
+// 과거 알림 내역 조회
+router.get("/history", notiController.getNotificationHistoryView);
+
 export default router;

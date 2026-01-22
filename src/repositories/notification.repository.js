@@ -99,3 +99,46 @@ export const updateSettings = async (user_id, updateData) => {
         data: updateData
     });
 };
+
+// 발송 완료된 정보를 기록하는 함수
+export const createHistory = async (notiData) => {
+    return await prisma.notificationHistory.create({
+        data: {
+            user_id: notiData.user_id,
+            notification_trigger_id: notiData.notification_id,
+            route_search_id: notiData.route_id,
+
+            origin_name: notiData.origin_name || "알 수 없음",
+            destination_name: notiData.destination_name || "알 수 없음",
+            departure_datetime: notiData.scheduled,
+            arrival_datetime: new DataTransfer(),
+            duration_minutes: 0,
+
+        }
+    });
+};
+
+//현재 대기 중인 가장 가까운 알림 조회
+export const getActiveTrigger = async (user_id) => {
+    return await prisma.notificationTrigger.findFirst({
+        where: {
+            user_id: BigInt(user_id),
+            sent_success: false,
+            scheduled: { gte: new Date() }
+        },
+        include: {
+            station: true,
+            routeSearch: true
+        },
+        orderBy: {scheduled: 'asc' }
+    });
+};
+
+//과거 발송 완료된 히스토리 리스트 조회
+export const getHistoryList = async (user_id) => {
+    return await prisma.notificationHistory.findMany({
+        where: { user_id: BigInt(user_id) },
+        orderBy: { departure_datetime: 'desc' },
+        take: 10
+    })
+}

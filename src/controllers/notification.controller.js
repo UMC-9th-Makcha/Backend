@@ -103,3 +103,23 @@ export const updateSettings = async (req, res, next) => {
     }
 };
 
+export const getNotificationHistoryView = async (req, res, next) => {
+    try {
+        // 요청으로부터 사용자 ID 추출
+        const user_id = req.user_id;
+
+        //서비스 호출
+        const pageData = await notiService.getFullNotificationPageData(user_id);
+        
+        //성공 응답 전송
+        const response = new CustomSuccess(
+            "NOTI-200-005",
+            200,
+            "사용자 과거 알림 내역 호출에 성공하였습니다.",
+            toSafeJSON(pageData)
+        );
+        return res.status(response.statusCode).json(response);
+    } catch (error) {
+        next(error);
+    }
+};

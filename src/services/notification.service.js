@@ -157,6 +157,19 @@ export const checkAndSendNotifications = async () => {
                     sent_success: nextTrigger === null ? true : false,
                     sent_at: new Date()
                 });
+
+                //최종 발송 완료인 경우 History에 기록 남기기
+                if (nextTrigger === null || message.includes("실시간")) {
+                    try {
+                        await notiRepo.createHistory({
+                            ...noti,
+                            origin_name: noti.station?.station_name,
+                            destination_name: "목적지" // RouteSearch에서 가져와야됨
+                        });
+                    } catch (hisError) {
+                        console.error("히스토리 저장 실패:", hisError);
+                    }
+                }
             }
         } catch (innerError) {
             // 개별 알림 에러 로그 (스케줄러 중단 방지)
@@ -193,3 +206,32 @@ export const cancelNotification = async (notification_id, user_id) => {
     return await notiRepo.deleteNotification(notification_id);
 }
 
+//알림 통합 조회 서비스
+export const getFullNotificationPageData = async (user_id) => {
+    //세 가지 데이터를 병렬로 동시에 조회함
+    const [settings, activeTrigger, historyList] = await Promise.all([
+        getMySettings(user_id),
+        notiRepo.getActiveTrigger(user_id),
+        notiRepo.getHistoryList(user_id),
+    ]);
+
+    return {
+        // 설정된 정보를 보여줌 (userTriggerSettings 관련)
+        user_setting: settings,
+        current_alert: activeTrigger ? {
+            id: String(activeTrigger.notification_id),
+            station_name: activeTrigger.station?.station_name,
+            scheduled_time: activeTrigger.scheduled,
+        } : null,
+
+        // 과거 이용 내역 리스트
+        history: historyList.map(h => ({
+            id: String(h.notification_history_id),
+            origin: h.origin_name,
+            destination: h.destination_name,
+            departure_time: h.departure_datetime,
+            arrival_time: h.arrival_datetime,
+            duration: h.duration_minutes
+        }))
+    };
+};
