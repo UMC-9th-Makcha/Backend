@@ -7,6 +7,43 @@ import { refreshLimiter } from '../middleware/rateLimit.middleware.js';
 const router = Router();
 
 //카카오 로그인 api
+//밑에는 스웨거 배포 테스트 입니다.
+/**
+ * @swagger
+ * /auth/kakao:
+ *   post:
+ *     summary: 카카오 로그인
+ *     description: |
+ *       카카오 OAuth 인가 코드(code)를 받아 로그인 또는 회원가입을 진행합니다.
+ *       성공 시 Access Token은 응답 body로,
+ *       Refresh Token은 HttpOnly 쿠키로 전달됩니다.
+ *     tags:
+ *       - Auth
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - code
+ *             properties:
+ *               code:
+ *                 type: string
+ *                 description: 카카오 OAuth 인가 코드
+ *                 example: "authorization_code_from_kakao"
+ *     responses:
+ *       200:
+ *         description: 카카오 로그인 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/SuccessResponse"
+ *       400:
+ *         description: code 누락
+ *       401:
+ *         description: 인증 실패
+ */
 router.post('/kakao', isNotLoggedIn, authController.kakaoLogin);
 //카카오 토큰 재발급 api
 router.post('/refresh', refreshLimiter, authController.refresh);
