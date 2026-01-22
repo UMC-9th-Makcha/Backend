@@ -19,10 +19,11 @@ jobs:
       # EC2 접속을 위한 SSH 설정입니다. base64로 개인키를 복호화했으며, 이미 깃 Repository secrets에 넣었습니다.
       - name: Setup SSH
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY_BASE64 }}" | base64 -d > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          set -e
+          mkdir -p "$HOME/.ssh"
+          echo "${{ secrets.EC2_SSH_KEY_BASE64 }}" | base64 --decode > "$HOME/.ssh/id_rsa"
+          chmod 600 "$HOME/.ssh/id_rsa"
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> "$HOME/.ssh/known_hosts"
 
       #EC2 서버 배포 실행.
       - name: Deploy to EC2
