@@ -3,6 +3,9 @@
 ## 📁 Project Structure
 
 ```text
+prisma/
+├── migrations/
+├── schema.prisma
 src/
 ├── config/
 ├── controllers/
@@ -10,16 +13,7 @@ src/
 ├── repositories/
 ├── services/
 ├── response/
-│
-├── database/
-│   ├── migrations/
-│   │   └── 20250102_create_user_table.js
-│   │
-│   ├── seeders/
-│   │   └── seed_stations.js
-│   │
-│   └── index.js
-│
+├── util/
 ├── app.js
 └── index.js
 ```
@@ -105,6 +99,19 @@ src/
 ## 7. Collaboration Rules
 - feature/{이슈번호}-{기능명}으로 브랜치 파고, develop으로 PR 올려주세요.
 - 메시지 템플릿/발송 정책 변경은 PRD와 동기화
+
+개발 시 커밋 메시지는 아래 타입을 참고해주세요.
+
+| Type      | 의미                                         | 예시                                  |
+|-----------|--------------------------------------------|--------------------------------------|
+| **Feat**  | 새로운 기능 추가                             | feat: 로그인 기능 추가                |
+| **Fix**   | 버그 수정                                   | fix: 회원가입 버그 수정               |
+| **Docs**  | 문서 수정                                   | docs: README 내용 수정                |
+| **Style** | 코드 포맷팅, 공백, 세미콜론 등 (로직 변경 없음) | style: 코드 포맷팅 적용               |
+| **Refactor** | 코드 리팩토링 (기능 변경 없음)            | refactor: 사용자 서비스 리팩토링      |
+| **Test**  | 테스트 코드 작성/수정                        | test: 회원가입 API 테스트 추가        |
+| **Chore** | 빌드/배포/패키지 관련 수정                  | chore: npm 패키지 업데이트           |
+
 
 ---
 
