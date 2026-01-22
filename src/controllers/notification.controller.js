@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import * as notiService from "../services/notification.service.js";
 import { CustomSuccess } from '../response/customSuccess.js';
+import { recordRecentDestination } from "../services/recentDestination.service.js";
 
 // 매 분 0초에 실행
 cron.schedule("* * * * *", async () => {
@@ -20,10 +21,20 @@ const toSafeJSON = (data) => {
 
 export const createNotification = async (req, res, next) => {
     try {
-        const user_id = req.user.id; 
+        const user_id = req.user.userId; 
         const result = await notiService.registerNotification({
             ...req.body,
             user_id: user_id
+        });
+
+        await recordRecentDestination({
+            userId,
+            placeId: req.body.placeId,
+            title: req.body.title,
+            roadAddress: req.body.roadAddress,
+            detailAddress: req.body.detailAddress,
+            latitude: req.body.latitude,
+            longitude: req.body.longitude,
         });
 
         const response = new CustomSuccess(
