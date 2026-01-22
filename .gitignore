@@ -1,3 +1,6 @@
+#절대 올라가면 안됩니다.
+*.pem
+
 # dependency directories
 node_modules/
 
