@@ -1,4 +1,4 @@
-import { prisma } from "../config/db.config.js";
+import { prisma } from '../config/prisma.js';  //경로 수정 작업을 진행함.
 
 // 알림 생성
 export const addNotification = async (data) => {
