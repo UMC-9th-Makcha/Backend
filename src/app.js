@@ -6,7 +6,7 @@ import notificationRouter from "./routes/notification.route.js";
 import authRouter from "./routes/auth.route.js";
 import placeRouter from "./routes/myPlace.route.js";
 import { globalErrorHandler } from "./middleware/error.middleware.js";
-import routeSearchRouter from "./routes/routeSearch.route.js";
+import routeCandidateRouter from "./routes/routeCandidate.route.js";
 
 const app = express();
 
@@ -25,7 +25,7 @@ app.use(
 app.use("/api/alerts", notificationRouter);
 app.use("/auth", authRouter);
 app.use("/api", placeRouter);
-app.use("/api/routes", routeSearchRouter);
+app.use("/api/routes", routeCandidateRouter);
 
 app.get("/", (req, res) => {
   res.send("server on");
