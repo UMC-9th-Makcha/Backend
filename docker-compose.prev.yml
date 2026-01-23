@@ -1,0 +1,45 @@
+services:
+  mysql:
+    image: mysql:8.0 #MySQL은 롤백 대상이 아니며, DB 데이터는 유지하고 백엔드 애플리케이션만 이전 버전 복구.
+    container_name: makcha-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      TZ: Asia/Seoul
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command:
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - makcha-network
+
+  backend:
+    image: makcha-backend:prev   # 이전 정상 이미지 태그, 이전 정상 배포 시점 도커-컴포즈를 따로 보관
+    container_name: makcha-backend # 롤백 시 같은 컨테이너를 교체하기 위한 설계.
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - makcha-network
+
+volumes:
+  mysql_data:
+
+networks:
+  makcha-network:
+    driver: bridge
