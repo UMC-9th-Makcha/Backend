@@ -31,11 +31,19 @@ app.use("/api", recentDestinationRouter);
 app.use("/api", placeRouter);
 
 
-// Swagger
+// Swagger -> ui적으로 보완했는데 팀장님 확인 한 번 부탁드립니다!
 app.use(
   "/api-docs",
   swaggerUi.serve,
-  swaggerUi.setup(swaggerSpec)
+  swaggerUi.setup(swaggerSpec, {
+    explorer: true,                 // 상단 검색/탐색 활성화
+    swaggerOptions: {
+      docExpansion: "list",         // API 목록 접힌 상태로 시작
+      defaultModelsExpandDepth: -1, // Models 섹션 숨김
+      persistAuthorization: true,   // 새로고침해도 JWT 유지
+    },
+    customSiteTitle: "Makcha API Docs",
+  })
 );
 
 app.get("/", (req, res) => {
