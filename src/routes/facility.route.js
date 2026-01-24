@@ -60,7 +60,7 @@ router.get('/search', facilityController.searchFacilities);
  *     summary: 카테고리별 시설 검색
  *     description: |
  *       특정 카테고리에 해당하는 시설만 검색합니다.
- *       카페, 음식점, 공원 등의 카테고리별로 필터링됩니다.
+ *       카페, 음식점, PC방 등의 카테고리별로 필터링됩니다.
  *     tags:
  *       - 주변 시설
  *     parameters:
@@ -69,7 +69,7 @@ router.get('/search', facilityController.searchFacilities);
  *         required: true
  *         schema:
  *           type: string
- *           enum: [CAFE, RESTAURANT, PARK, LIBRARY, SHOPPING_MALL, PC]
+ *           enum: [CAFE, RESTAURANT, PARK, LIBRARY, SHOPPING_MALL, PC_ROOM]
  *         description: 시설 카테고리 타입
  *         example: "CAFE"
  *       - in: query
