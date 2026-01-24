@@ -7,6 +7,17 @@ function toFiniteNumber(v) {
   return Number.isFinite(n) ? n : null;
 }
 
+function isValidLatLng(lat, lng) {
+  return (
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lng >= -180 &&
+    lng <= 180
+  );
+}
+
 export async function postRouteCandidates(req, res, next) {
   const path = "/api/routes/candidates";
 
@@ -22,15 +33,22 @@ export async function postRouteCandidates(req, res, next) {
       destLat === null ||
       destLng === null
     ) {
-      return res
-        .status(400)
-        .json(
-          new CustomError(
-            "COM-400-001",
-            "필수 파라미터 누락 또는 형식 오류",
-            path,
-          ),
-        );
+      throw new CustomError(
+        "COM-400-001",
+        "필수 파라미터 누락 또는 형식 오류",
+        path,
+      );
+    }
+
+    // 좌표 범위 오류
+    if (
+      !isValidLatLng(originLat, originLng) ||
+      !isValidLatLng(destLat, destLng)
+    ) {
+      throw new CustomError("MAP-400-001", "잘못된 좌표값", path, {
+        origin: { lat: originLat, lng: originLng },
+        destination: { lat: destLat, lng: destLng },
+      });
     }
 
     const candidates = await getRouteCandidates({
@@ -44,11 +62,6 @@ export async function postRouteCandidates(req, res, next) {
       }),
     );
   } catch (e) {
-    return (
-      next?.(e) ??
-      res
-        .status(500)
-        .json(new CustomError("COM-500-001", "서버 내부 오류", path))
-    );
+    next(e);
   }
 }

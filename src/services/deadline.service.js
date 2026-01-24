@@ -35,24 +35,37 @@ function nowKstParts() {
 }
 
 export function resolveLastDepartureDateTime({ hhmm }) {
-  const [hh, mm] = hhmm.split(":").map(Number);
+  // 1) 입력 검증 + "HH:MM" 파싱
+  if (typeof hhmm !== "string") return new Date(NaN);
 
+  const match = hhmm.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return new Date(NaN);
+
+  const hh = Number(match[1]);
+  const mm = Number(match[2]);
+
+  if (!Number.isFinite(hh) || !Number.isFinite(mm)) return new Date(NaN);
+  if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return new Date(NaN);
+
+  // 2) 현재 KST 기준 날짜 파트 가져오기
   const { kstMs, y, m, d, hour } = nowKstParts();
 
+  // 3) 오늘/내일 해당 시각 만들기
   const todayAt = makeKstDate(y, m, d, hh, mm);
 
-  // 내일 KST 날짜
   const tomorrowBase = makeKstDate(y, m, d, 0, 0);
   tomorrowBase.setDate(tomorrowBase.getDate() + 1);
+
   const y2 = tomorrowBase.getFullYear();
   const m2 = tomorrowBase.getMonth() + 1;
   const d2 = tomorrowBase.getDate();
+
   const tomorrowAt = makeKstDate(y2, m2, d2, hh, mm);
 
-  // 새벽(0~4시)에는 "오늘"로 고정
+  // 4) 새벽(0~4시)에는 오늘
   if (hour < EARLY_CUTOFF) return todayAt;
 
-  // 현재보다 미래면 오늘, 아니면 내일
+  // 5) 그 외: 오늘 시각이 아직 안 지났으면 오늘, 지났으면 내일
   return todayAt.getTime() >= kstMs ? todayAt : tomorrowAt;
 }
 
@@ -65,12 +78,27 @@ export function computeDeadline({ firstLastTimeHHMM, bufferMinutes }) {
   const lastDeparture = resolveLastDepartureDateTime({
     hhmm: firstLastTimeHHMM,
   });
-  const deadlineMs = lastDeparture.getTime() - bufferMinutes * 60 * 1000;
+
+  const lastMs = lastDeparture?.getTime?.();
+  if (!Number.isFinite(lastMs)) {
+    // hhmm 파싱 실패 or resolve 로직 실패
+    return { deadlineAt: null, minutesLeft: null, isPossible: false };
+  }
+
+  const deadlineMs = lastMs - Number(bufferMinutes ?? 0) * 60 * 1000;
+  if (!Number.isFinite(deadlineMs)) {
+    return { deadlineAt: null, minutesLeft: null, isPossible: false };
+  }
+
+  const deadlineDate = new Date(deadlineMs);
+  if (Number.isNaN(deadlineDate.getTime())) {
+    return { deadlineAt: null, minutesLeft: null, isPossible: false };
+  }
 
   const minutesLeft = Math.floor((deadlineMs - Date.now()) / (60 * 1000));
 
   return {
-    deadlineAt: new Date(deadlineMs).toISOString(),
+    deadlineAt: deadlineDate.toISOString(),
     minutesLeft,
     isPossible: minutesLeft >= 0,
   };

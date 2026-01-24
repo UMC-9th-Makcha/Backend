@@ -1,3 +1,4 @@
+import { CustomError } from "../response/customError.js";
 import { getPolylineByRouteToken } from "../services/routePolyline.service.js";
 
 export async function getRoutePolyline(req, res, next) {
@@ -5,12 +6,12 @@ export async function getRoutePolyline(req, res, next) {
     const { route_token } = req.params;
 
     if (typeof route_token !== "string" || route_token.length < 10) {
-      return res.status(400).json({
-        successCode: "COM-400-001",
-        statusCode: 400,
-        message: "route_token 형식이 올바르지 않습니다.",
-        result: null,
-      });
+      throw new CustomError(
+        "COM-400-001",
+        "route_token 형식이 올바르지 않습니다.",
+        req.originalUrl,
+        { route_token },
+      );
     }
 
     const result = await getPolylineByRouteToken({ routeToken: route_token });
@@ -22,6 +23,6 @@ export async function getRoutePolyline(req, res, next) {
       result,
     });
   } catch (err) {
-    return next(err);
+    next(err);
   }
 }
