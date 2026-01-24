@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import waitingPlaceController from '../controllers/waiting-place.controller.js';
-import { isLoggedIn } from '../middleware/auth.middleware.js';
 
 const router = Router();
 

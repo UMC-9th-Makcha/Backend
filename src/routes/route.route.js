@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import routeController from '../controllers/route.controller.js';
-import { isLoggedIn } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
