@@ -14,6 +14,7 @@ import homeRouter from './routes/home.route.js';
 import myplacesRouter from "./routes/myplaces.route.js";
 import placeRouter from "./routes/myPlace.route.js";
 import myinfoRouter from "./routes/myinfo.route.js";
+import saveReportRouter from "./routes/saveReports.route.js";
 import { globalErrorHandler } from "./middleware/error.middleware.js";
 
 const app = express();
@@ -36,6 +37,7 @@ app.use("/api/myplaces", myplacesRouter);
 app.use("/api", recentDestinationRouter);
 app.use("/api", placeRouter);
 app.use("/api/me", myinfoRouter);
+app.use("/api/save-reports", saveReportRouter);
 
 
 // Swagger
@@ -60,5 +62,8 @@ app.get("/health", (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+//에러 핸들러
+app.use(globalErrorHandler);
 
 export default app;
