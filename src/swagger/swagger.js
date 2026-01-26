@@ -73,7 +73,24 @@ const options = {
           },
         },
 
-        // 자주 가는 장소 생성 request
+        // myplaces 테이블 엔티티 (HOME/PLACE 공용)
+        MyPlace: {
+          type: "object",
+          properties: {
+            myplace_id: { type: "string", example: "4" },
+            user_id: { type: "string", example: "2" },
+            place_type: { type: "string", enum: ["PLACE", "HOME"], example: "PLACE" },
+            provider_place_id: { type: "string", nullable: true, example: "123456" },
+            place_address: { type: "string", example: "서울특별시 강남구 테헤란로 212" },
+            place_detail_address: { type: "string", nullable: true, example: "12층" },
+            latitude: { type: "number", example: 37.501274, minimum: -90, maximum: 90 },
+            longitude: { type: "number", example: 127.039585, minimum: -180, maximum: 180 },
+            created_at: { type: "string", format: "date-time", nullable: true, example: "2026-01-16T13:20:57.132Z" },
+            updated_at: { type: "string", format: "date-time", nullable: true, example: "2026-01-16T13:36:45.783Z" },
+          },
+        },
+
+        // PLACE 생성 request
         MyPlaceCreateRequest: {
           type: "object",
           required: ["place_address", "latitude", "longitude"],
@@ -86,7 +103,7 @@ const options = {
           },
         },
 
-        // 자주 가는 장소 갱신 request
+        // PLACE 수정 request (부분 갱신)
         MyPlaceUpdateRequest: {
           type: "object",
           description: "아래 필드 중 하나 이상 필수. 전달된 필드만 수정됨. place_type 수정 불가.",
@@ -99,44 +116,111 @@ const options = {
           },
         },
 
-        // 자주 가는 장소
-        MyPlace: {
+        // HOME upsert request
+        HomeUpsertRequest: {
           type: "object",
+          required: ["place_address", "latitude", "longitude"],
           properties: {
-            myplace_id: { type: "string", example: "4" },
-            user_id: { type: "string", example: "2" },
-            place_type: { type: "string", example: "PLACE", enum: ["PLACE", "HOME"] },
-            provider_place_id: { type: "string", nullable: true, example: "123456" },
-            place_address: { type: "string", example: "서울특별시 강남구 테헤란로 212" },
-            place_detail_address: { type: "string", nullable: true, example: "12층" },
-            latitude: { type: "number", example: 37.501274 },
-            longitude: { type: "number", example: 127.039585 },
-            created_at: { type: "string", format: "date-time", example: "2026-01-16T13:20:57.132Z" },
-            updated_at: { type: "string", format: "date-time", example: "2026-01-16T13:36:45.783Z" },
+            provider_place_id: { type: "string", nullable: true, example: "123" },
+            place_address: { type: "string", example: "서울시 ..." },
+            place_detail_address: { type: "string", nullable: true, example: "101동" },
+            latitude: { type: "number", example: 37.5665, minimum: -90, maximum: 90 },
+            longitude: { type: "number", example: 126.978, minimum: -180, maximum: 180 },
           },
         },
 
-        // 자주 가는 장소 생성 result
-        MyPlaceCreateResult: {
-          allOf: [
-            { $ref: "#/components/schemas/MyPlace" },
-            {
-              type: "object",
-              description: "생성 응답은 updated_at이 없을 수 있음",
-              properties: {
-                updated_at: { type: "string", format: "date-time", nullable: true },
-              },
-            },
-          ],
-        },
-
-        // 자주 가는 장소 삭제 result
+        // DELETE result (PLACE 삭제)
         MyPlaceDeleteResult: {
           type: "object",
           properties: {
             myplace_id: { type: "string", example: "4" },
           },
         },
+
+        // 내 장소 조회 result (HOME 1개 + PLACE 리스트)
+        MyPlacesGetResult: {
+          type: "object",
+          properties: {
+            home: { $ref: "#/components/schemas/MyPlace", nullable: true },
+            places: {
+              type: "array",
+              items: { $ref: "#/components/schemas/MyPlace" },
+            },
+          },
+        },
+
+        // 내 정보 조회 result
+        MyInfoResult: {
+          type: "object",
+          properties: {
+            userId: { type: "string", example: "2" },
+            name: { type: "string", example: "서막차" },
+            email: { type: "string", example: "makcha@kakao.com" },
+            phone: { type: "string", example: "01012345678", description: "전화번호. 없으면 빈 문자열" },
+          },
+        },
+
+        // 내 정보 수정 request
+        UpdateMyPhoneRequest: {
+          type: "object",
+          required: ["phone"],
+          properties: {
+            phone: {
+              type: "string",
+              example: "010-1234-5678",
+              description: "숫자 외 문자 제거 후 10~11자리만 허용",
+            },
+          },
+        },
+
+        // 세이브 리포트 차트 아이템
+        SaveReportChartItem: {
+          type: "object",
+          properties: {
+            month: { type: "string", example: "2025-12", description: "YYYY-MM" },
+            savedAmount: { type: "number", example: 45000, description: "누적 절약 금액(원)" },
+            totalCount: { type: "number", example: 9, description: "절약 기록 건수" },
+            highlight: { type: "boolean", example: true, description: "선택 월 여부" },
+          },
+        },
+
+        // 세이브 리포트 아이템 (상세 내역)
+        SaveReportItem: {
+          type: "object",
+          properties: {
+            notificationHistoryId: { type: "string", example: "2" },
+            originName: { type: "string", example: "홍대입구" },
+            destinationName: { type: "string", example: "잠실" },
+            departureDatetime: { type: "string", format: "date-time", example: "2025-12-18T18:05:00.000Z" },
+            arrivalDatetime: { type: "string", format: "date-time", example: "2025-12-18T18:55:00.000Z" },
+            savedFareWon: { type: "number", example: 2300 },
+          },
+        },
+
+        // 세이브 리포트 result
+        SaveReportResult: {
+          type: "object",
+          properties: {
+            selectedMonth: { type: "string", example: "2025-12", description: "YYYY-MM" },
+            range: {
+              type: "object",
+              properties: {
+                from: { type: "string", example: "2025-11", description: "YYYY-MM" },
+                to: { type: "string", example: "2026-01", description: "YYYY-MM" },
+              },
+            },
+            chart: {
+              type: "array",
+              items: { $ref: "#/components/schemas/SaveReportChartItem" },
+            },
+            items: {
+              type: "array",
+              description: "highlight=true(선택 월)에 해당하는 상세 리스트만 제공",
+              items: { $ref: "#/components/schemas/SaveReportItem" },
+            },
+          },
+        },
+
       },
     },
   },
