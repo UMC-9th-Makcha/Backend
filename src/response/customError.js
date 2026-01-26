@@ -30,3 +30,5 @@ export class CustomError {
 // HOME-404-001 홈 정보 없음
 
 // MYPLACE-200-001 내 장소 조회 성공
+// RECENT-400-001 잘못된 recentId
+// RECENT-404-001 최근 목적지 정보 없음
