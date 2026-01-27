@@ -2,7 +2,9 @@
 
 import {
     findRecentDestinations,
-    upsertRecentDestination
+    upsertRecentDestination,
+    findRecentDestinationByIdAndUser,
+    deleteRecentDestinationByIdAndUser,
 } from "../repositories/recentDestination.repository.js";
 import { toRecentDestinationDto } from "../dtos/recentDestination.dto.js";
 import { CustomError } from "../response/customError.js";
@@ -46,4 +48,49 @@ export const recordRecentDestination = async({
         longitude,
         usedAt,
     });
+};
+
+export const deleteRecentDestination = async ({ userId, recentId }) => {
+    // userId bigint 변환
+    const userIdBigint = typeof userId === "bigint" ? userId : BigInt(userId);
+
+    // 서비스에서만 recentId bigint 변환
+    let recentIdBigint;
+    try {
+        recentIdBigint = BigInt(recentId);
+    } catch {
+        const e = new CustomError(
+        "RECENT-400-001",
+        "Invalid recentId",
+        "/api/recent-destinations"
+        );
+        e.statusCode = 400;
+        throw e;
+    }
+
+    // 삭제 대상 조회
+    // user의 목적지가 아닌 경우 포함
+    const row = await findRecentDestinationByIdAndUser(
+        userIdBigint,
+        recentIdBigint
+    );
+
+    if (!row) {
+        const e = new CustomError(
+        "RECENT-404-001",
+        "recent destinations not found",
+        "/api/recent-destinations"
+        );
+        e.statusCode = 404;
+        throw e;
+    }
+
+    // hard delete
+    await deleteRecentDestinationByIdAndUser(
+        userIdBigint,
+        recentIdBigint
+    );
+
+    // 삭제된 row DTO 변환 후 return
+    return toRecentDestinationDto(row);
 };
