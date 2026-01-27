@@ -4,8 +4,7 @@ import cookieParser from "cookie-parser"; //쿠키 파싱
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./swagger/swagger.js";
 
-//import notificationRouter from "./routes/notification.route.js"; -> 서버 오류로 주석처리함.
-//아예 이 알림은 현재 제외 후 배포하겠습니다:)
+import notificationRouter from "./routes/notification.route.js";
 import authRouter from "./routes/auth.route.js";
 import placeRouter from "./routes/myPlace.route.js";
 import myinfoRouter from "./routes/myinfo.route.js";
@@ -29,8 +28,7 @@ app.use(
 );
 
 //라우터
-// app.use("/api/alerts", notificationRouter);
-// 아예 이 알림은 현재 제외 후 배포하겠습니다:)
+app.use("/api/alerts", notificationRouter);
 app.use('/auth', authRouter);
 app.use("/api/myplaces/home", homeRouter);
 
