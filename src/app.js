@@ -10,7 +10,6 @@ import authRouter from "./routes/auth.route.js";
 import placeRouter from "./routes/myPlace.route.js";
 import myinfoRouter from "./routes/myinfo.route.js";
 import recentDestinationRouter from './routes/recentDestination.route.js';
-import placeRouter from './routes/myPlace.route.js';
 import saveReportRouter from "./routes/saveReports.route.js";
 import homeRouter from './routes/home.route.js';
 import myplacesRouter from "./routes/myplaces.route.js";
