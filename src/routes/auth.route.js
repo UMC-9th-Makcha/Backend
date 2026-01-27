@@ -51,6 +51,12 @@ router.post('/kakao', isNotLoggedIn, authController.kakaoLogin);
  *     description: |
  *       HttpOnly 쿠키에 저장된 Refresh Token을 이용해
  *       새로운 Access Token을 발급합니다.
+ * 
+ *       ⚠️ 중요 사항 ⚠️
+ *       - 이 API는 HttpOnly 쿠키 기반 인증을 사용합니다.
+ *       - Swagger UI에서는 HttpOnly 쿠키를 설정할 수 없어
+ *         `Try it out` 실행 시 401 오류(Refresh Token 누락)가 발생합니다.
+ *       - 실제 동작은 "카카오 로그인 이후 브라우저 환경"에서만 확인 가능합니다.
  *     tags:
  *       - Auth
  *     responses:
@@ -70,6 +76,11 @@ router.post('/refresh', refreshLimiter, authController.refresh);
  *       로그인된 사용자를 로그아웃 처리합니다.
  *       서버에 저장된 Refresh Token을 삭제하고
  *       클라이언트의 Refresh Token 쿠키를 제거합니다.
+ *       ⚠️ 중요 사항 ⚠️
+ *       - 이 API는 HttpOnly 쿠키 기반 인증을 사용합니다.
+ *       - Swagger UI에서는 HttpOnly 쿠키를 설정할 수 없어
+ *         `Try it out` 실행 시 401 오류(Refresh Token 누락)가 발생합니다.
+ *       - 실제 동작은 "카카오 로그인 이후 브라우저 환경"에서만 확인 가능합니다.
  *     tags:
  *       - Auth
  *     responses:
@@ -89,6 +100,11 @@ router.post('/logout', isLoggedIn, authController.logout);
  *     description: |
  *       로그인된 사용자의 계정을 삭제합니다.
  *       회원 정보 삭제 후 Refresh Token 쿠키를 제거합니다.
+ *       ⚠️ 중요 사항 ⚠️
+ *       - 이 API는 HttpOnly 쿠키 기반 인증을 사용합니다.
+ *       - Swagger UI에서는 HttpOnly 쿠키를 설정할 수 없어
+ *         `Try it out` 실행 시 401 오류(Refresh Token 누락)가 발생합니다.
+ *       - 실제 동작은 "카카오 로그인 이후 브라우저 환경"에서만 확인 가능합니다.
  *     tags:
  *       - Auth
  *     responses:
