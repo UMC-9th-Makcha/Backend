@@ -18,6 +18,9 @@ export class CustomError {
 // COM-400-001 필수 파라미터 누락
 // COM-500-001 서버 내부 오류
 
+// SAVEREPORT-200-001 세이브 리포트 조회 성공
+// SAVEREPORT-400-001 잘못된 month 파라미터
+
 // PLACE-400-001 잘못된 장소 요청
 // PLACE-400-002 필수 장소 파라미터 누락
 // PLACE-400-003 유효하지 않은 장소 타입
@@ -30,9 +33,6 @@ export class CustomError {
 // HOME-404-001 홈 정보 없음
 
 // MYPLACE-200-001 내 장소 조회 성공
-// RECENT-400-001 잘못된 recentId
-// RECENT-404-001 최근 목적지 정보 없음
-
 // MYINFO-200-001 내 정보 조회 성공
 // MYINFO-200-002 전화번호 수정 성공
 

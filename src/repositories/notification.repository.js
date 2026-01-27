@@ -23,6 +23,9 @@ export const addNotification = async (data) => {
                 scheduled: (data.scheduled && !isNaN(new Date(data.scheduled))) 
                     ? new Date(data.scheduled) 
                     : new Date(),
+            },
+            include: {
+                user: true
             }
         });
         return notification;
@@ -111,7 +114,7 @@ export const createHistory = async (notiData) => {
             origin_name: notiData.origin_name || "알 수 없음",
             destination_name: notiData.destination_name || "알 수 없음",
             departure_datetime: notiData.scheduled,
-            arrival_datetime: new DataTransfer(),
+            arrival_datetime: new Date(),
             duration_minutes: 0,
 
         }

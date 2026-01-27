@@ -4,14 +4,12 @@ import cookieParser from "cookie-parser"; //쿠키 파싱
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./swagger/swagger.js";
 
-//import notificationRouter from "./routes/notification.route.js"; -> 서버 오류로 주석처리함.
-//아예 이 알림은 현재 제외 후 배포하겠습니다:)
+import notificationRouter from "./routes/notification.route.js";
 import authRouter from "./routes/auth.route.js";
 import recentDestinationRouter from './routes/recentDestination.route.js';
 import placeRouter from './routes/myPlace.route.js';
 import homeRouter from './routes/home.route.js';
 import myplacesRouter from "./routes/myplaces.route.js";
-import placeRouter from "./routes/myPlace.route.js";
 import myinfoRouter from "./routes/myinfo.route.js";
 import saveReportRouter from "./routes/saveReports.route.js";
 import { globalErrorHandler } from "./middleware/error.middleware.js";
@@ -31,13 +29,13 @@ app.use(
 );
 
 //라우터
-// app.use("/api/alerts", notificationRouter);
-// 아예 이 알림은 현재 제외 후 배포하겠습니다:)
+app.use("/api/alerts", notificationRouter);
 app.use('/auth', authRouter);
 app.use("/api/myplaces/home", homeRouter);
 app.use("/api/myplaces", myplacesRouter);
 app.use("/api", recentDestinationRouter);
 app.use("/api", placeRouter);
+app.use("/api/save-reports", saveReportRouter);
 app.use("/api/me", myinfoRouter);
 app.use("/api/save-reports", saveReportRouter);
 
@@ -62,9 +60,6 @@ app.get("/", (req, res) => {
   res.send("server on");
 });
 
-//에러 핸들러
-app.use(globalErrorHandler);
-
 //health 엔드포인트 추가. CORS 설정을 "운영 기준"으로 정리했습니다.
 app.get("/health", (req, res) => {
   res.status(200).json({
@@ -74,6 +69,7 @@ app.get("/health", (req, res) => {
   });
 });
 
+//에러 핸들러
 app.use(globalErrorHandler);
 
 export default app;

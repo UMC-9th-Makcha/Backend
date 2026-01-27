@@ -1,18 +1,31 @@
-import { bodyToNotification } from "../dtos/notification.dto.js";
 import * as notiRepo from "../repositories/notification.repository.js";
 import { CustomError } from "../response/customError.js"; // 파일 경로와 확장자 확인 필요
 import { sendSMS } from "../utils/sms.util.js"; // SMS 발송 모듈 가정 (추후 변경)
-import { checkSubwayRealtime } from "../utils/subway.util.js"; // 실시간 API 가정 (추후 변경)
+import { getRouteToken, deleteRouteToken } from "../utils/routeTokenStore.util.js";
+import { recordRecentDestination } from "./recentDestination.service.js"; // 경로 확인!
 
-export const registerNotification = async (body) => {
-    const data = bodyToNotification(body);
+export const registerNotification = async (userId, cacheKey, alert_time) => {
+    const cachedData = getRouteToken(cacheKey);
+    
+    if(!cachedData) {
+        throw new CustomError(
+            "NOTI-404-001",
+            "만료 되었거나 유효하지 않은 경로 정보입니다. 다시 조회하세요.",
+            "api/alerts"        
+        );
+    }
+
+    const { snapshot } = cachedData;
+    const destination = snapshot.destination;
+
+    const scheduledTime = new Date(snapshot.deadlineAt);
     const currentTime = new Date();
 
     // 유저가 마이페이지에서 알림 수정을 하지 않는다면 기본 값으로 DB 저장
-    await notiRepo.ensureUserSetting(data.user_id);
+    await notiRepo.ensureUserSetting(userId);
 
     // 막차까지 남은 시간 계산하기
-    const diffMin = Math.floor((data.scheduled - currentTime) / 60000);
+    const diffMin = Math.floor((scheduledTime - currentTime) / 60000);
 
     // 남은 시간 기준으로 DB에 들어갈 상태값 결정
     let initTrigger = 'SENT_THIRTY';
@@ -20,13 +33,36 @@ export const registerNotification = async (body) => {
     else if (diffMin <= 10) initTrigger = 'SENT_THREE';
     else if (diffMin <= 30 ) initTrigger = 'SENT_TEN';
 
-    // 레포지토리 호출 시 initTrigger 덮어씌워서 전달
+    // 5. 알림 테이블에 저장
     const result = await notiRepo.addNotification({
-        ...data,
-        trigger_time: initTrigger
+        user_id: userId,
+        station_id: snapshot.origin.stationId,
+        title: destination.name,
+        latitude: destination.lat,
+        longitude: destination.lng,
+        road_address: destination.address,
+        scheduled: scheduledTime,
+        trigger_time: initTrigger,
+        alert_time: alert_time 
     });
 
-    await sendSMS("01091459221", `[막차] 알림 예약 완료!`);
+    await recordRecentDestination({
+        userId,
+        placeId: destination.placeId,
+        title: destination.name,
+        roadAddress: destination.address,
+        latitude: destination.lat,
+        longitude: destination.lng
+    });
+
+    // 사용한 캐시는 삭제하여 메모리 관리
+    deleteRouteToken(cacheKey);
+
+    //result에 담긴 유저 정보 통해 번호를 가져옴
+    const userPhoneNumber = result.user?.phone_number;
+    if (userPhoneNumber) {
+        await sendSMS(userPhoneNumber, `막차 알림 예약이 완료되었습니다.`)
+    }
 
     return result;
 }
@@ -71,12 +107,10 @@ export const updateSettings = async (user_id, timeList) => {
 
 export const checkAndSendNotifications = async () => {
     const currentTime = new Date();
-    const MY_PHONE_NUMBER = "01091459221"; // 테스트용 하드코딩
-    let notifications;
 
     try {
         // 1. 아직 발송 완료되지 않은(sent_success: false) 알림들 조회
-        notifications = await notiRepo.findPendingNotifications(currentTime);
+        const notifications = await notiRepo.findPendingNotifications(currentTime);
     } catch (error) {
         throw new CustomError(
             "COM-500-001",
@@ -143,17 +177,25 @@ export const checkAndSendNotifications = async () => {
 
                 if (isRealTimeMatch) {
                     message = "지금 당장 출발하세요! (실시간 분석 완료)";
+                    nextTrigger = null;
                     // 마지막 단계이므로 nextTrigger는 그대로 null
                 }
             }
 
             // 3. 메시지가 결정되었다면 문자 발송 및 DB 업데이트
             if (message) {
-                await sendSMS(MY_PHONE_NUMBER, message);
+                const userPhone = noti.user?.phone_number;
+
+                if (userPhone) {
+                    await sendSMS(userPhone, message);
+                } else {
+                    console.warn(`[SMS skip] 유저번호 없음: ${noti.user_id}`);
+                }
                 
                 // 상태 업데이트 (nextTrigger가 있으면 업데이트, 없으면 완료 처리)
                 await notiRepo.updateSentStatus(noti.notification_id, {
                     trigger_time: nextTrigger,
+                    last_sent_min: diffMin,
                     sent_success: nextTrigger === null ? true : false,
                     sent_at: new Date()
                 });
@@ -164,7 +206,7 @@ export const checkAndSendNotifications = async () => {
                         await notiRepo.createHistory({
                             ...noti,
                             origin_name: noti.station?.station_name,
-                            destination_name: "목적지" // RouteSearch에서 가져와야됨
+                            destination_name: noti.title
                         });
                     } catch (hisError) {
                         console.error("히스토리 저장 실패:", hisError);
@@ -198,8 +240,10 @@ export const cancelNotification = async (notification_id, user_id) => {
     }
 
     try {
-        const MY_PHONE_NUMBER = "01091459221";
-        await sendSMS(MY_PHONE_NUMBER, "예약하신 알림이 취소되었습니다.");
+        const userPhone = notification.user?. phone_number;
+        if (userPhone) {
+            await sendSMS(userPhone, "예약하신 알림이 취소되었습니다.")
+        }
     } catch (e) { console.error(e); }
 
     //물리적 삭제로 알림 취소 로직 구현
