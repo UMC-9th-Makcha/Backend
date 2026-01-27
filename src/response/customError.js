@@ -41,3 +41,6 @@ export class CustomError {
 
 // SAVEREPORT-200-001 세이브 리포트 조회 성공
 // SAVEREPORT-400-001 잘못된 month 파라미터z
+// RECENT-400-001 잘못된 recentId
+// RECENT-404-001 최근 목적지 정보 없음
+

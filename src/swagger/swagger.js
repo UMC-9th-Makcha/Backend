@@ -19,6 +19,13 @@ const options = {
       },
     ],
     components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
       schemas: {
         SuccessResponse: {
           type: "object",
