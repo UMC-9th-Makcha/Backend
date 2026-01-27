@@ -73,3 +73,36 @@ export const deletePlace = async ({ myplace_id, user_id }) => {
     },
   });
 };
+
+// HOME: 기존 홈 1개 조회(업서트)
+export const findHomeByUserId = async ({ user_id }) => {
+  return prisma.myPlace.findFirst({
+    where: {
+      user_id: BigInt(user_id),
+      place_type: "HOME",
+    },
+    orderBy: { updated_at: "desc" }, // 최신 1개
+    select: {
+      myplace_id: true,
+      user_id: true,
+      place_type: true,
+      provider_place_id: true,
+      place_address: true,
+      place_detail_address: true,
+      latitude: true,
+      longitude: true,
+      created_at: true,
+      updated_at: true,
+    },
+  });
+};
+
+// HOME: 홈 삭제(유저 기준 전부 삭제)
+export const deleteHomeByUserId = async ({ user_id }) => {
+  return prisma.myPlace.deleteMany({
+    where: {
+      user_id: BigInt(user_id),
+      place_type: "HOME",
+    },
+  });
+};
