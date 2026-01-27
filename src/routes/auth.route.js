@@ -125,6 +125,10 @@ router.delete('/withdraw', isLoggedIn, authController.withdraw);
  *       로그인된 사용자의 전화번호로 SMS 인증번호를 발송합니다.
  *       - 전화번호는 010으로 시작하는 11자리 숫자만 허용됩니다.
  *       - 3분 내 최대 3회까지 요청할 수 있습니다.
+ *       ⚠️ 중요 사항 ⚠️
+ *       - 본 API는 Access Token(Bearer) 인증이 필요합니다.
+ *       - Swagger UI 상단의 Authorize 버튼을 클릭한 후,
+ *         `Bearer {AccessToken}` 형식으로 토큰을 입력해야 정상 동작합니다.
  *     tags:
  *       - Phone
  *     security:
@@ -163,6 +167,10 @@ router.post('/phone/send', isLoggedIn, phoneController.send);
  *     description: |
  *       SMS로 발송된 인증번호를 검증하고,
  *       인증에 성공하면 사용자의 전화번호를 저장합니다.
+ *       ⚠️ 중요 사항 ⚠️
+ *       - 본 API는 Access Token(Bearer) 인증이 필요합니다.
+ *       - Swagger UI 상단의 Authorize 버튼을 클릭한 후,
+ *          `Bearer {AccessToken}` 형식으로 토큰을 입력해야 정상 동작합니다.
  *     tags:
  *       - Phone
  *     security:
