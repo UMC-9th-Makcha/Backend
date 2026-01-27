@@ -1,3 +1,9 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,76 +13,73 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model myplace {
-  myplace_id           BigInt             @id @default(autoincrement())
-  user_id              BigInt
-  place_type           myplace_place_type
-  place_address        String             @db.VarChar(200)
-  place_detail_address String?            @db.VarChar(200)
-  latitude             Float
-  longitude            Float
-  created_at           DateTime           @default(now())
-  updated_at           DateTime
-  provider_place_id    String             @db.VarChar(50)
-  user                 user               @relation(fields: [user_id], references: [user_id], map: "MyPlace_user_id_fkey")
-
-  @@unique([user_id, place_type, provider_place_id], map: "MyPlace_user_id_place_type_provider_place_id_key")
-  @@index([user_id, place_type], map: "idx_user_type")
+enum PlaceType {
+  CAFE
+  SAUNA
+  PCROOM
 }
 
-model notificationhistory {
-  notification_history_id                                     BigInt               @id @default(autoincrement())
-  user_id                                                     BigInt
-  route_search_id                                             BigInt?
-  notification_trigger_id                                     BigInt?
-  origin_name                                                 String               @db.VarChar(100)
-  origin_place_id                                             String?              @db.VarChar(50)
-  origin_station_id                                           BigInt?
-  destination_name                                            String               @db.VarChar(200)
-  destination_station_id                                      BigInt?
-  destination_place_id                                        String?              @db.VarChar(50)
-  departure_datetime                                          DateTime
-  arrival_datetime                                            DateTime
-  duration_minutes                                            Int
-  route_detail_json                                           Json?
-  transfers                                                   Int?
-  walking_minutes                                             Int?
-  saved_fare_won                                              Int?
-  created_at                                                  DateTime             @default(now())
-  station_notificationhistory_destination_station_idTostation station?             @relation("notificationhistory_destination_station_idTostation", fields: [destination_station_id], references: [station_id], map: "NotificationHistory_destination_station_id_fkey")
-  notificationtrigger                                         notificationtrigger? @relation(fields: [notification_trigger_id], references: [notification_id], map: "NotificationHistory_notification_trigger_id_fkey")
-  station_notificationhistory_origin_station_idTostation      station?             @relation("notificationhistory_origin_station_idTostation", fields: [origin_station_id], references: [station_id], map: "NotificationHistory_origin_station_id_fkey")
-  routesearch                                                 routesearch?         @relation(fields: [route_search_id], references: [route_id], map: "NotificationHistory_route_search_id_fkey")
-  user                                                        user                 @relation(fields: [user_id], references: [user_id], map: "NotificationHistory_user_id_fkey")
-
-  @@index([destination_station_id], map: "NotificationHistory_destination_station_id_fkey")
-  @@index([notification_trigger_id], map: "NotificationHistory_notification_trigger_id_fkey")
-  @@index([origin_station_id], map: "NotificationHistory_origin_station_id_fkey")
-  @@index([route_search_id], map: "NotificationHistory_route_search_id_fkey")
-  @@index([user_id, departure_datetime(sort: Desc)], map: "idx_nh_user_depart")
+enum TriggerTime {
+  INIT
+  SENT_THIRTY
+  SENT_TEN
+  SENT_THREE
+  SENT_NOW
 }
 
-model notificationtrigger {
-  notification_id     BigInt                           @id @default(autoincrement())
-  route_id            BigInt?
-  user_id             BigInt
-  station_id          BigInt
-  trigger_time        notificationtrigger_trigger_time
-  sent_success        Boolean
-  sent_at             DateTime?
-  scheduled           DateTime?
-  phone_number        String
-  notificationhistory notificationhistory[]
-  routesearch         routesearch?                     @relation(fields: [route_id], references: [route_id], map: "NotificationTrigger_route_id_fkey")
-  station             station                          @relation(fields: [station_id], references: [station_id], map: "NotificationTrigger_station_id_fkey")
-  user                user                             @relation(fields: [user_id], references: [user_id], map: "NotificationTrigger_user_id_fkey")
-
-  @@index([route_id], map: "NotificationTrigger_route_id_fkey")
-  @@index([station_id], map: "NotificationTrigger_station_id_fkey")
-  @@index([user_id], map: "NotificationTrigger_user_id_fkey")
+enum MyPlaceType {
+  PLACE
+  HOME
 }
 
-model recentdestination {
+model User {
+  user_id       BigInt    @id @default(autoincrement())
+  kakao_id      BigInt    @unique
+  phone_number  String    @db.VarChar(50)
+  nickname      String    @db.VarChar(200)
+  email         String    @db.VarChar(200)
+  social_type   String    @db.VarChar(200)
+  refresh_token String    @db.VarChar(200)
+  created_at    DateTime  @default(now())
+  updated_at    DateTime? @updatedAt
+  last_login_at DateTime?
+
+  userTerms             UserTerm[]
+  recentDestinations    RecentDestination[]
+  routeSearches         RouteSearch[]
+  saveReports           SaveReport[]
+  myPlaces              MyPlace[]
+  notificationTriggers  NotificationTrigger[]
+  notificationSettings  UserNotificationSetting?
+  notificationHistories NotificationHistory[]
+}
+
+model Term {
+  term_id      BigInt    @id @default(autoincrement())
+  term_name    String    @db.VarChar(200)
+  term_content String    @db.VarChar(200)
+  is_required  Boolean
+  created_at   DateTime  @default(now())
+  updated_at   DateTime? @updatedAt
+
+  userTerms UserTerm[]
+}
+
+model UserTerm {
+  user_id      BigInt
+  term_id      BigInt
+  consent_type String    @db.VarChar(200)
+  agreed       Boolean
+  agreed_at    DateTime  @default(now())
+  updated_at   DateTime? @updatedAt
+
+  user User @relation(fields: [user_id], references: [user_id])
+  term Term @relation(fields: [term_id], references: [term_id])
+
+  @@id([user_id, term_id])
+}
+
+model RecentDestination {
   recent_id      BigInt   @id @default(autoincrement())
   user_id        BigInt
   title          String   @db.VarChar(255)
@@ -87,121 +90,131 @@ model recentdestination {
   longitude      Float
   used_at        DateTime @default(now())
   created_at     DateTime @default(now())
-  user           user     @relation(fields: [user_id], references: [user_id], map: "RecentDestination_user_id_fkey")
 
-  @@unique([user_id, place_id], map: "RecentDestination_user_id_place_id_key")
-  @@index([user_id, used_at], map: "RecentDestination_user_id_used_at_idx")
+  user User @relation(fields: [user_id], references: [user_id])
+
+  @@unique([user_id, place_id], name: "user_place_unique")
+  @@index([user_id, used_at])
 }
 
-model routesearch {
-  route_id            BigInt                @id @default(autoincrement())
-  user_id             BigInt
-  station_id          BigInt
-  end_address         String?               @db.VarChar(200)
-  searched_at         DateTime?             @default(now())
-  is_success          Boolean?
-  arrived_at          DateTime?
-  traveled_time       Int?
-  notificationhistory notificationhistory[]
-  notificationtrigger notificationtrigger[]
-  station             station               @relation(fields: [station_id], references: [station_id], map: "RouteSearch_station_id_fkey")
-  user                user                  @relation(fields: [user_id], references: [user_id], map: "RouteSearch_user_id_fkey")
+model Station {
+  station_id   BigInt  @id @default(autoincrement())
+  station_name String  @db.VarChar(50)
+  station_line String? @db.VarChar(20)
+  latitude     Float?
+  longitude    Float?
+  region       String?
 
-  @@index([station_id], map: "RouteSearch_station_id_fkey")
-  @@index([user_id], map: "RouteSearch_user_id_fkey")
+  routeSearches        RouteSearch[]
+  notificationTriggers NotificationTrigger[]
+  originHistories      NotificationHistory[] @relation("origin_station")
+  destinationHistories NotificationHistory[] @relation("destination_station")
 }
 
-model savereport {
+model RouteSearch {
+  route_id      BigInt    @id @default(autoincrement())
+  user_id       BigInt
+  station_id    BigInt
+  end_address   String?   @db.VarChar(200)
+  searched_at   DateTime? @default(now())
+  is_success    Boolean?
+  arrived_at    DateTime?
+  traveled_time Int?
+
+  user    User    @relation(fields: [user_id], references: [user_id])
+  station Station @relation(fields: [station_id], references: [station_id])
+
+  notificationTriggers  NotificationTrigger[]
+  notificationHistories NotificationHistory[]
+}
+
+model SaveReport {
   report_id    BigInt    @id @default(autoincrement())
   user_id      BigInt
-  month        String    @db.Char(7)
+  month        String    @db.Char(7) // "YYYY-MM"
   saved_amount Int
   total_count  Int
   created_at   DateTime  @default(now())
-  updated_at   DateTime?
-  user         user      @relation(fields: [user_id], references: [user_id], map: "SaveReport_user_id_fkey")
+  updated_at   DateTime? @updatedAt
 
-  @@unique([user_id, month], map: "SaveReport_user_id_month_key")
-  @@index([user_id, month], map: "SaveReport_user_id_month_idx")
+  user User @relation(fields: [user_id], references: [user_id])
+
+  @@unique([user_id, month])
+  @@index([user_id, month])
 }
 
-model station {
-  station_id                                                              BigInt                @id @default(autoincrement())
-  station_name                                                            String                @db.VarChar(50)
-  station_line                                                            String?               @db.VarChar(20)
-  latitude                                                                Float?
-  longitude                                                               Float?
-  region                                                                  String?
-  notificationhistory_notificationhistory_destination_station_idTostation notificationhistory[] @relation("notificationhistory_destination_station_idTostation")
-  notificationhistory_notificationhistory_origin_station_idTostation      notificationhistory[] @relation("notificationhistory_origin_station_idTostation")
-  notificationtrigger                                                     notificationtrigger[]
-  routesearch                                                             routesearch[]
+model MyPlace {
+  myplace_id           BigInt    @id @default(autoincrement())
+  user_id              BigInt
+  place_type           MyPlaceType
+  provider_place_id    String   @db.VarChar(50)
+  place_address        String    @db.VarChar(200)
+  place_detail_address String?   @db.VarChar(200)
+  latitude             Float
+  longitude            Float
+  created_at           DateTime  @default(now())
+  updated_at           DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [user_id])
+
+  @@unique([user_id, place_type, provider_place_id], name: "uniq_user_type_provider_place")
+  @@index([user_id, place_type], name: "idx_user_type")
 }
 
-model term {
-  term_id      BigInt     @id @default(autoincrement())
-  term_name    String     @db.VarChar(200)
-  term_content String     @db.VarChar(200)
-  is_required  Boolean
-  created_at   DateTime   @default(now())
-  updated_at   DateTime?
-  userterm     userterm[]
+model NotificationTrigger {
+  notification_id BigInt      @id @default(autoincrement())
+  route_id        BigInt?
+  user_id         BigInt
+  station_id      BigInt
+  phone_number    String
+  trigger_time    TriggerTime
+  sent_success    Boolean
+  sent_at         DateTime?
+  scheduled       DateTime?
+
+  user        User         @relation(fields: [user_id], references: [user_id])
+  station     Station      @relation(fields: [station_id], references: [station_id])
+  routeSearch RouteSearch? @relation(fields: [route_id], references: [route_id])
+
+  notificationHistories NotificationHistory[]
 }
 
-model user {
-  user_id                 BigInt                   @id @default(autoincrement())
-  kakao_id                BigInt                   @unique(map: "User_kakao_id_key")
-  phone_number            String                   @db.VarChar(50)
-  nickname                String                   @db.VarChar(200)
-  email                   String                   @db.VarChar(200)
-  social_type             String                   @db.VarChar(200)
-  refresh_token           String                   @db.VarChar(200)
-  created_at              DateTime                 @default(now())
-  updated_at              DateTime?
-  last_login_at           DateTime?
-  myplace                 myplace[]
-  notificationhistory     notificationhistory[]
-  notificationtrigger     notificationtrigger[]
-  recentdestination       recentdestination[]
-  routesearch             routesearch[]
-  savereport              savereport[]
-  usernotificationsetting usernotificationsetting?
-  userterm                userterm[]
-}
-
-model usernotificationsetting {
+model UserNotificationSetting {
   user_notification_setting_id BigInt    @id @default(autoincrement())
-  user_id                      BigInt    @unique(map: "UserNotificationSetting_user_id_key")
+  user_id                      BigInt    @unique
   enabled                      Boolean
   notify_mask                  Int
   created_at                   DateTime  @default(now())
-  updated_at                   DateTime?
-  user                         user      @relation(fields: [user_id], references: [user_id], map: "UserNotificationSetting_user_id_fkey")
+  updated_at                   DateTime? @updatedAt
+
+  user User @relation(fields: [user_id], references: [user_id])
 }
 
-model userterm {
-  user_id      BigInt
-  term_id      BigInt
-  consent_type String    @db.VarChar(200)
-  agreed       Boolean
-  agreed_at    DateTime  @default(now())
-  updated_at   DateTime?
-  term         term      @relation(fields: [term_id], references: [term_id], map: "UserTerm_term_id_fkey")
-  user         user      @relation(fields: [user_id], references: [user_id], map: "UserTerm_user_id_fkey")
+model NotificationHistory {
+  notification_history_id BigInt   @id @default(autoincrement())
+  user_id                 BigInt
+  route_search_id         BigInt?
+  notification_trigger_id BigInt?
+  origin_name             String   @db.VarChar(100)
+  origin_place_id         String?  @db.VarChar(50)
+  origin_station_id       BigInt?
+  destination_name        String   @db.VarChar(200)
+  destination_station_id  BigInt?
+  destination_place_id    String?  @db.VarChar(50)
+  departure_datetime      DateTime
+  arrival_datetime        DateTime
+  duration_minutes        Int
+  route_detail_json       Json?
+  transfers               Int?
+  walking_minutes         Int?
+  saved_fare_won          Int?
+  created_at              DateTime @default(now())
 
-  @@id([user_id, term_id])
-  @@index([term_id], map: "UserTerm_term_id_fkey")
-}
+  user                 User                 @relation(fields: [user_id], references: [user_id])
+  routeSearches        RouteSearch?         @relation(fields: [route_search_id], references: [route_id])
+  notificationTriggers NotificationTrigger? @relation(fields: [notification_trigger_id], references: [notification_id])
+  originStation        Station?             @relation("origin_station", fields: [origin_station_id], references: [station_id])
+  destinationStation   Station?             @relation("destination_station", fields: [destination_station_id], references: [station_id])
 
-enum myplace_place_type {
-  PLACE
-  HOME
-}
-
-enum notificationtrigger_trigger_time {
-  INIT
-  SENT_THIRTY
-  SENT_TEN
-  SENT_THREE
-  SENT_NOW
+  @@index([user_id, departure_datetime(sort: Desc)], name: "idx_nh_user_depart")
 }
