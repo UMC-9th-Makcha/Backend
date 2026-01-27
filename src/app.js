@@ -11,6 +11,7 @@ import placeRouter from "./routes/myPlace.route.js";
 import myinfoRouter from "./routes/myinfo.route.js";
 import recentDestinationRouter from './routes/recentDestination.route.js';
 import placeRouter from './routes/myPlace.route.js';
+import saveReportRouter from "./routes/saveReports.route.js";
 import homeRouter from './routes/home.route.js';
 import myplacesRouter from "./routes/myplaces.route.js";
 import { globalErrorHandler } from "./middleware/error.middleware.js";
@@ -37,6 +38,7 @@ app.use("/api/myplaces/home", homeRouter);
 app.use("/api/myplaces", myplacesRouter);
 app.use("/api", recentDestinationRouter);
 app.use("/api", placeRouter);
+app.use("/api/save-reports", saveReportRouter);
 app.use("/api/me", myinfoRouter);
 
 app.use("/api/routes", routeCandidateRouter);
@@ -72,6 +74,7 @@ app.get("/health", (req, res) => {
   });
 });
 
+//에러 핸들러
 app.use(globalErrorHandler);
 
 export default app;
