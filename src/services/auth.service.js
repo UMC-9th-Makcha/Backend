@@ -64,6 +64,10 @@ const kakaoLogin = async (code) => {
     // Refresh Token DB 저장 
     await authRepository.updateRefreshToken(user.user_id, refreshToken);
 
+
+    // 회원가입 이후, 전화번호 받아야 하는 유저 계산(지금 사업자번호가 없기에 모든 유저가 대상.)
+    const needsPhoneVerification = user.phone_number === '';
+
     // 응답
     return {
       refreshToken,
@@ -74,6 +78,7 @@ const kakaoLogin = async (code) => {
           id: user.user_id.toString(),
           nickname: user.nickname,
           profileImage,
+          needsPhoneVerification,
         },
       },
     };

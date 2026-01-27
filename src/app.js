@@ -13,7 +13,7 @@ import recentDestinationRouter from './routes/recentDestination.route.js';
 import placeRouter from './routes/myPlace.route.js';
 import saveReportRouter from "./routes/saveReports.route.js";
 import homeRouter from './routes/home.route.js';
-
+import myplacesRouter from "./routes/myplaces.route.js";
 import { globalErrorHandler } from "./middleware/error.middleware.js";
 import routeCandidateRouter from "./routes/routeCandidate.route.js";
 
@@ -35,7 +35,7 @@ app.use(
 // 아예 이 알림은 현재 제외 후 배포하겠습니다:)
 app.use('/auth', authRouter);
 app.use("/api/myplaces/home", homeRouter);
-
+app.use("/api/myplaces", myplacesRouter);
 app.use("/api", recentDestinationRouter);
 app.use("/api", placeRouter);
 app.use("/api/save-reports", saveReportRouter);
@@ -43,8 +43,20 @@ app.use("/api/me", myinfoRouter);
 
 app.use("/api/routes", routeCandidateRouter);
 
-// Swagger
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// Swagger -> ui적으로 보완했는데 팀장님 확인 한 번 부탁드립니다!
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    explorer: true,                 // 상단 검색/탐색 활성화
+    swaggerOptions: {
+      docExpansion: "list",         // API 목록 접힌 상태로 시작
+      defaultModelsExpandDepth: -1, // Models 섹션 숨김
+      persistAuthorization: true,   // 새로고침해도 JWT 유지
+    },
+    customSiteTitle: "Makcha API Docs",
+  })
+);
 
 app.get("/", (req, res) => {
   res.send("server on");

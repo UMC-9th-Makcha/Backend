@@ -19,18 +19,26 @@ const options = {
       },
     ],
     components: {
-        schemas: {
-          SuccessResponse: {
-            type: "object",
-            properties: {
-              successCode: { type: "string" },
-              message: { type: "string" },
-              result: { type: "object" },
-            },
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+      schemas: {
+        SuccessResponse: {
+          type: "object",
+          properties: {
+            successCode: { type: "string" },
+            statusCode: { type: "number" },
+            message: { type: "string" },
+            result: { type: "object" },
           },
         },
       },
     },
+  },
   
 
   // routes 폴더의 Swagger 주석만 읽음
