@@ -10,8 +10,9 @@ import authRouter from "./routes/auth.route.js";
 import placeRouter from "./routes/myPlace.route.js";
 import myinfoRouter from "./routes/myinfo.route.js";
 import recentDestinationRouter from './routes/recentDestination.route.js';
+import placeRouter from './routes/myPlace.route.js';
 import homeRouter from './routes/home.route.js';
-
+import myplacesRouter from "./routes/myplaces.route.js";
 import { globalErrorHandler } from "./middleware/error.middleware.js";
 import routeCandidateRouter from "./routes/routeCandidate.route.js";
 
@@ -33,7 +34,7 @@ app.use(
 // 아예 이 알림은 현재 제외 후 배포하겠습니다:)
 app.use('/auth', authRouter);
 app.use("/api/myplaces/home", homeRouter);
-
+app.use("/api/myplaces", myplacesRouter);
 app.use("/api", recentDestinationRouter);
 app.use("/api", placeRouter);
 app.use("/api/me", myinfoRouter);
