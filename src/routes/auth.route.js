@@ -8,6 +8,7 @@ const router = Router();
 
 //카카오 로그인 api
 //밑에는 스웨거 배포 테스트 입니다.
+
 /**
  * @swagger
  * /auth/kakao:
@@ -40,6 +41,7 @@ const router = Router();
  *       401:
  *         description: 인증 실패
  */
+
 router.post('/kakao', isNotLoggedIn, authController.kakaoLogin);
 //카카오 토큰 재발급 api
 router.post('/refresh', refreshLimiter, authController.refresh);
