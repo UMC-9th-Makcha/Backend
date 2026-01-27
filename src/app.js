@@ -6,12 +6,12 @@ import { swaggerSpec } from "./swagger/swagger.js";
 
 import notificationRouter from "./routes/notification.route.js";
 import authRouter from "./routes/auth.route.js";
-import placeRouter from "./routes/myPlace.route.js";
-import myinfoRouter from "./routes/myinfo.route.js";
 import recentDestinationRouter from './routes/recentDestination.route.js';
-import saveReportRouter from "./routes/saveReports.route.js";
+import placeRouter from './routes/myPlace.route.js';
 import homeRouter from './routes/home.route.js';
 import myplacesRouter from "./routes/myplaces.route.js";
+import myinfoRouter from "./routes/myinfo.route.js";
+import saveReportRouter from "./routes/saveReports.route.js";
 import { globalErrorHandler } from "./middleware/error.middleware.js";
 import routeCandidateRouter from "./routes/routeCandidate.route.js";
 
@@ -37,6 +37,7 @@ app.use("/api", recentDestinationRouter);
 app.use("/api", placeRouter);
 app.use("/api/save-reports", saveReportRouter);
 app.use("/api/me", myinfoRouter);
+app.use("/api/save-reports", saveReportRouter);
 
 app.use("/api/routes", routeCandidateRouter);
 
@@ -58,9 +59,6 @@ app.use(
 app.get("/", (req, res) => {
   res.send("server on");
 });
-
-//에러 핸들러
-app.use(globalErrorHandler);
 
 //health 엔드포인트 추가. CORS 설정을 "운영 기준"으로 정리했습니다.
 app.get("/health", (req, res) => {
