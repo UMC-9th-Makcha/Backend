@@ -46,3 +46,28 @@ export const upsertRecentDestination = async ({
         },
     });
 };
+
+
+export const findRecentDestinationByIdAndUser = async (
+    userIdBigint,
+    recentIdBigint
+) => {
+    return prisma.recentDestination.findFirst({
+        where: {
+            recent_id: recentIdBigint,
+            user_id: userIdBigint,
+        },
+    });
+};
+
+export const deleteRecentDestinationByIdAndUser = async (
+    userIdBigint,
+    recentIdBigint
+) => {
+    return prisma.recentDestination.deleteMany({
+        where: {
+            recent_id: recentIdBigint,
+            user_id: userIdBigint,
+        },
+    });
+};
