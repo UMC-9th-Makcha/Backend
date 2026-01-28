@@ -24,234 +24,73 @@ const router = Router();
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required: [origin, destination]
- *             properties:
- *               origin:
- *                 type: object
- *                 required: [lat, lng]
- *                 properties:
- *                   lat:
- *                     type: number
- *                     example: 37.6175836
- *                   lng:
- *                     type: number
- *                     example: 127.0760294
- *               destination:
- *                 type: object
- *                 required: [lat, lng]
- *                 properties:
- *                   lat:
- *                     type: number
- *                     example: 37.6260506
- *                   lng:
- *                     type: number
- *                     example: 127.0937494
+ *             $ref: "#/components/schemas/RouteCandidatesRequest"
  *     responses:
  *       200:
  *         description: 후보 경로 조회 성공
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 successCode:
- *                   type: string
- *                   example: ROUTE-200-001
- *                 statusCode:
- *                   type: number
- *                   example: 200
- *                 message:
- *                   type: string
- *                   example: 후보 경로 조회 성공
- *                 result:
- *                   type: object
- *                   properties:
+ *               $ref: "#/components/schemas/RouteCandidatesResponse"
+ *             examples:
+ *               success:
+ *                 summary: 성공 예시
+ *                 value:
+ *                   successCode: "ROUTE-200-001"
+ *                   statusCode: 200
+ *                   message: "후보 경로 조회 성공"
+ *                   result:
  *                     candidates:
- *                       type: array
- *                       description: 경로 후보 목록 (최대 3개)
- *                       items:
- *                         type: object
- *                         properties:
- *                           candidate_key:
- *                             type: string
- *                             example: tmp_1769239744553_6
- *                           route_token:
- *                             type: string
- *                             nullable: true
- *                             description: 폴리라인/알림 확정용 토큰 (picked에 대해서만 발급, TTL 30분)
- *                             example: rt_iNR1QytQDnuycCITER-WDg
- *                           station_id:
- *                             type: number
- *                             nullable: true
- *                             description: 첫 대중교통(지하철/버스) 승차 지점 ID(ODsay stationID)
- *                             example: 645
- *                           end_address:
- *                             type: string
- *                             nullable: true
- *                             example: null
- *                           is_supported:
- *                             type: boolean
- *                             example: true
- *                           is_possible:
- *                             type: boolean
- *                             description: 현재 시점 기준 탑승 가능 여부 (막차 정보 없으면 false)
- *                             example: true
- *                           is_optimal:
- *                             type: boolean
- *                             description: 후보 중 최적 경로 여부
- *                             example: true
- *                           reason:
- *                             type: string
- *                             nullable: true
- *                             example: null
- *                           message:
- *                             type: string
- *                             nullable: true
- *                             example: null
- *                           tags:
- *                             type: array
- *                             description: 경로에 포함된 교통수단 태그
- *                             items:
- *                               type: string
- *                               enum: [SUBWAY, BUS]
- *                             example: ["SUBWAY"]
- *                           card:
- *                             type: object
- *                             properties:
- *                               traveled_time:
- *                                 type: number
- *                                 description: 총 소요 시간(분)
- *                                 example: 21
- *                               transfer_count:
- *                                 type: number
- *                                 description: 환승 횟수
- *                                 example: 0
- *                               public_transit_fare:
- *                                 type: number
- *                                 nullable: true
- *                                 description: 대중교통 요금
- *                                 example: 1550
- *                               walk_time:
- *                                 type: number
- *                                 description: 총 도보 시간(분)
- *                                 example: 17
- *                               deadline_at:
- *                                 type: string
- *                                 nullable: true
- *                                 description: 출발 마감 시각(UTC ISO8601, 예: ...Z)
- *                                 example: 2026-01-28T14:31:00.000Z
- *                               minutes_left:
- *                                 type: number
- *                                 nullable: true
- *                                 description: 출발 마감까지 남은 시간(분)
- *                                 example: 1142
- *                           detail:
- *                             type: object
- *                             properties:
- *                               steps:
- *                                 type: array
- *                                 description: 상세 경로 step 목록
- *                                 items:
- *                                   type: object
- *                                   properties:
- *                                     type:
- *                                       type: string
- *                                       description: |
- *                                         경로 step 타입 (프론트 렌더링용 map_type).
- *
- *                                         - WALK : 도보
- *                                         - BUS_{COLOR} : 버스 색상 타입
- *                                           - BUS_GREEN / BUS_BLUE / BUS_RED / BUS_SKY / BUS_ORANGE
- *                                         - SUBWAY_{type} : 지하철 노선 타입
- *                                           - type은 ODsay 지하철 노선 타입 코드(숫자)
- *                                           - 예: SUBWAY_1, SUBWAY_2, SUBWAY_6, SUBWAY_9
- *                                       example: SUBWAY_6
- *                                     points:
- *                                       type: array
- *                                       description: 경로 좌표 목록
- *                                       items:
- *                                         type: object
- *                                         properties:
- *                                           lat:
- *                                             type: number
- *                                             example: 37.6175836
- *                                           lng:
- *                                             type: number
- *                                             example: 127.0760294
- *                                     section_time:
- *                                       type: number
- *                                       description: 해당 구간 소요시간(분)
- *                                       example: 2
- *                                     distance:
- *                                       type: number
- *                                       description: 해당 구간 거리(m)
- *                                       example: 107
- *                                     station_count:
- *                                       type: number
- *                                       nullable: true
- *                                       description: 정거장/역 개수 (대중교통 구간만)
- *                                       example: 4
- *                                     from:
- *                                       type: object
- *                                       nullable: true
- *                                       description: 승차 지점 (대중교통 구간만)
- *                                       properties:
- *                                         name: { type: string, example: 태릉입구 }
- *                                         lat: { type: number, example: 37.617357 }
- *                                         lng: { type: number, example: 127.074854 }
- *                                         id: { type: number, example: 645 }
- *                                     to:
- *                                       type: object
- *                                       nullable: true
- *                                       description: 하차 지점 (대중교통 구간만)
- *                                       properties:
- *                                         name: { type: string, example: 봉화산(서울의료원) }
- *                                         lat: { type: number, example: 37.617368 }
- *                                         lng: { type: number, example: 127.091324 }
- *                                         id: { type: number, example: 647 }
- *                                     bus_numbers:
- *                                       type: array
- *                                       nullable: true
- *                                       description: 버스 번호 목록 (버스 구간만)
- *                                       items:
- *                                         type: string
- *                                       example: ["1132"]
- *                                     bus_types:
- *                                       type: array
- *                                       nullable: true
- *                                       description: 버스 타입 코드 목록 (버스 구간만)
- *                                       items:
- *                                         type: number
- *                                       example: [12]
- *                                     subway_lines:
- *                                       type: array
- *                                       nullable: true
- *                                       description: 지하철 노선명 목록 (지하철 구간만)
- *                                       items:
- *                                         type: string
- *                                       example: ["수도권 6호선"]
- *                                     way:
- *                                       type: string
- *                                       nullable: true
- *                                       description: 진행 방향(종착역명 등, 지하철 구간만)
- *                                       example: 봉화산(서울의료원)
- *                                     way_code:
- *                                       type: number
- *                                       nullable: true
- *                                       description: 방향 코드 (지하철 구간만)
- *                                       example: 2
- *                                     subway_type:
- *                                       type: number
- *                                       nullable: true
- *                                       description: 지하철 타입 코드 (ODsay)
- *                                       example: null
- *                           warnings:
- *                             type: array
- *                             description: 판단 불가/주의 사유 코드 목록 (예: FIRST_LEG_LAST_TIME_UNKNOWN, LAST_LEG_LAST_TIME_INVALID 등)
- *                             items:
- *                               type: string
- *                             example: []
+ *                       - candidate_key: "tmp_1769239744553_6"
+ *                         route_token: "rt_iNR1QytQDnuycCITER-WDg"
+ *                         station_id: 645
+ *                         end_address: "서울특별시 노원구 ..."
+ *                         is_supported: true
+ *                         is_possible: true
+ *                         is_optimal: true
+ *                         reason: null
+ *                         message: null
+ *                         tags: ["SUBWAY"]
+ *                         card:
+ *                           traveled_time: 21
+ *                           transfer_count: 0
+ *                           public_transit_fare: 1550
+ *                           walk_time: 17
+ *                           deadline_at: "2026-01-28T14:31:00.000Z"
+ *                           minutes_left: 1142
+ *                         detail:
+ *                           steps:
+ *                             - type: "WALK"
+ *                               points:
+ *                                 - { lat: 37.6175836, lng: 127.0760294 }
+ *                                 - { lat: 37.617357, lng: 127.074854 }
+ *                               section_time: 2
+ *                               distance: 107
+ *                               station_count: null
+ *                               from: null
+ *                               to: null
+ *                               bus_numbers: null
+ *                               bus_types: null
+ *                               subway_lines: null
+ *                               way: null
+ *                               way_code: null
+ *                               subway_type: null
+ *                             - type: "SUBWAY_6"
+ *                               points:
+ *                                 - { lat: 37.617357, lng: 127.074854 }
+ *                                 - { lat: 37.617368, lng: 127.091324 }
+ *                               section_time: 7
+ *                               distance: 0
+ *                               station_count: 4
+ *                               from: { name: "태릉입구", lat: 37.617357, lng: 127.074854, id: 645 }
+ *                               to: { name: "봉화산(서울의료원)", lat: 37.617368, lng: 127.091324, id: 647 }
+ *                               bus_numbers: null
+ *                               bus_types: null
+ *                               subway_lines: ["수도권 6호선"]
+ *                               way: "봉화산(서울의료원)"
+ *                               way_code: 2
+ *                               subway_type: 6
+ *                         warnings: []
  *       400:
  *         description: 필수 파라미터 누락/형식 오류
  *         content:
@@ -259,13 +98,18 @@ const router = Router();
  *             schema:
  *               type: object
  *               properties:
- *                 errorCode: { type: string, example: COM-400-001 }
+ *                 errorCode: { type: string, example: "COM-400-001" }
  *                 statusCode: { type: number, example: 400 }
- *                 message: { type: string, example: 요청 파라미터가 올바르지 않습니다. }
- *                 result:
- *                   type: object
- *                   nullable: true
- *                   example: null
+ *                 message: { type: string, example: "요청 파라미터가 올바르지 않습니다." }
+ *                 result: { type: object, nullable: true }
+ *             examples:
+ *               bad_request:
+ *                 summary: 400 예시
+ *                 value:
+ *                   errorCode: "COM-400-001"
+ *                   statusCode: 400
+ *                   message: "요청 파라미터가 올바르지 않습니다."
+ *                   result: null
  *       500:
  *         description: 서버 내부 오류 또는 외부 API 오류
  *         content:
@@ -273,13 +117,18 @@ const router = Router();
  *             schema:
  *               type: object
  *               properties:
- *                 errorCode: { type: string, example: COM-500-001 }
+ *                 errorCode: { type: string, example: "COM-500-001" }
  *                 statusCode: { type: number, example: 500 }
- *                 message: { type: string, example: 서버 내부 오류가 발생했습니다. }
- *                 result:
- *                   type: object
- *                   nullable: true
- *                   example: null
+ *                 message: { type: string, example: "서버 내부 오류가 발생했습니다." }
+ *                 result: { type: object, nullable: true }
+ *             examples:
+ *               server_error:
+ *                 summary: 500 예시
+ *                 value:
+ *                   errorCode: "COM-500-001"
+ *                   statusCode: 500
+ *                   message: "서버 내부 오류가 발생했습니다."
+ *                   result: null
  */
 
 router.post("/candidates", postRouteCandidates);
@@ -304,7 +153,7 @@ router.post("/candidates", postRouteCandidates);
  *         description: 후보 경로 조회 API에서 발급된 route_token
  *         schema:
  *           type: string
- *         example: rt_iNR1QytQDnuycCITER-WDg
+ *         example: "rt_iNR1QytQDnuycCITER-WDg"
  *     responses:
  *       200:
  *         description: 폴리라인 조회 성공
@@ -313,25 +162,17 @@ router.post("/candidates", postRouteCandidates);
  *             schema:
  *               type: object
  *               properties:
- *                 successCode:
- *                   type: string
- *                   example: ROUTE-200-002
- *                 statusCode:
- *                   type: number
- *                   example: 200
- *                 message:
- *                   type: string
- *                   example: 폴리라인 조회 성공
+ *                 successCode: { type: string, example: "ROUTE-200-002" }
+ *                 statusCode: { type: number, example: 200 }
+ *                 message: { type: string, example: "폴리라인 조회 성공" }
  *                 result:
  *                   type: object
  *                   properties:
- *                     route_token:
- *                       type: string
- *                       example: rt_iNR1QytQDnuycCITER-WDg
+ *                     route_token: { type: string, example: "rt_iNR1QytQDnuycCITER-WDg" }
  *                     map_object:
  *                       type: string
  *                       description: ODsay loadLane 호출용 mapObject (디버그용)
- *                       example: 0:0@6:2:645:647
+ *                       example: "0:0@6:2:645:647"
  *                     paths:
  *                       type: array
  *                       description: 노선별 polyline 정보
@@ -352,27 +193,15 @@ router.post("/candidates", postRouteCandidates);
  *                             items:
  *                               type: object
  *                               properties:
- *                                 lat:
- *                                   type: number
- *                                   example: 37.617366
- *                                 lng:
- *                                   type: number
- *                                   example: 127.074854
+ *                                 lat: { type: number, example: 37.617366 }
+ *                                 lng: { type: number, example: 127.074854 }
  *                     boundary:
  *                       type: object
  *                       properties:
- *                         top:
- *                           type: number
- *                           example: 37.619884
- *                         left:
- *                           type: number
- *                           example: 127.074854
- *                         bottom:
- *                           type: number
- *                           example: 37.617366
- *                         right:
- *                           type: number
- *                           example: 127.091336
+ *                         top: { type: number, example: 37.619884 }
+ *                         left: { type: number, example: 127.074854 }
+ *                         bottom: { type: number, example: 37.617366 }
+ *                         right: { type: number, example: 127.091336 }
  *       400:
  *         description: route_token 형식 오류
  *         content:
@@ -380,13 +209,18 @@ router.post("/candidates", postRouteCandidates);
  *             schema:
  *               type: object
  *               properties:
- *                 errorCode: { type: string, example: COM-400-002 }
+ *                 errorCode: { type: string, example: "COM-400-002" }
  *                 statusCode: { type: number, example: 400 }
- *                 message: { type: string, example: route_token 형식이 올바르지 않습니다. }
- *                 result:
- *                   type: object
- *                   nullable: true
- *                   example: null
+ *                 message: { type: string, example: "route_token 형식이 올바르지 않습니다." }
+ *                 result: { type: object, nullable: true }
+ *             examples:
+ *               invalid_token:
+ *                 summary: 400 예시
+ *                 value:
+ *                   errorCode: "COM-400-002"
+ *                   statusCode: 400
+ *                   message: "route_token 형식이 올바르지 않습니다."
+ *                   result: null
  *       404:
  *         description: 폴리라인 데이터 없음
  *         content:
@@ -394,13 +228,18 @@ router.post("/candidates", postRouteCandidates);
  *             schema:
  *               type: object
  *               properties:
- *                 errorCode: { type: string, example: ROUTE-404-001 }
+ *                 errorCode: { type: string, example: "ROUTE-404-001" }
  *                 statusCode: { type: number, example: 404 }
- *                 message: { type: string, example: 폴리라인 데이터를 찾을 수 없습니다. }
- *                 result:
- *                   type: object
- *                   nullable: true
- *                   example: null
+ *                 message: { type: string, example: "폴리라인 데이터를 찾을 수 없습니다." }
+ *                 result: { type: object, nullable: true }
+ *             examples:
+ *               not_found:
+ *                 summary: 404 예시
+ *                 value:
+ *                   errorCode: "ROUTE-404-001"
+ *                   statusCode: 404
+ *                   message: "폴리라인 데이터를 찾을 수 없습니다."
+ *                   result: null
  *       410:
  *         description: route_token 만료
  *         content:
@@ -408,13 +247,18 @@ router.post("/candidates", postRouteCandidates);
  *             schema:
  *               type: object
  *               properties:
- *                 errorCode: { type: string, example: ROUTE-410-001 }
+ *                 errorCode: { type: string, example: "ROUTE-410-001" }
  *                 statusCode: { type: number, example: 410 }
- *                 message: { type: string, example: route_token이 만료되었습니다. }
- *                 result:
- *                   type: object
- *                   nullable: true
- *                   example: null
+ *                 message: { type: string, example: "route_token이 만료되었습니다." }
+ *                 result: { type: object, nullable: true }
+ *             examples:
+ *               gone:
+ *                 summary: 410 예시
+ *                 value:
+ *                   errorCode: "ROUTE-410-001"
+ *                   statusCode: 410
+ *                   message: "route_token이 만료되었습니다."
+ *                   result: null
  *       500:
  *         description: 서버 내부 오류 또는 외부 API 오류
  *         content:
@@ -422,13 +266,18 @@ router.post("/candidates", postRouteCandidates);
  *             schema:
  *               type: object
  *               properties:
- *                 errorCode: { type: string, example: COM-500-001 }
+ *                 errorCode: { type: string, example: "COM-500-001" }
  *                 statusCode: { type: number, example: 500 }
- *                 message: { type: string, example: 서버 내부 오류가 발생했습니다. }
- *                 result:
- *                   type: object
- *                   nullable: true
- *                   example: null
+ *                 message: { type: string, example: "서버 내부 오류가 발생했습니다." }
+ *                 result: { type: object, nullable: true }
+ *             examples:
+ *               server_error:
+ *                 summary: 500 예시
+ *                 value:
+ *                   errorCode: "COM-500-001"
+ *                   statusCode: 500
+ *                   message: "서버 내부 오류가 발생했습니다."
+ *                   result: null
  */
 
 router.get("/polylines/:route_token", getRoutePolyline);

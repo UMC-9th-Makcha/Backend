@@ -48,7 +48,7 @@ lane이 여러 개일 수 있지만 보통 1개이므로 0번을 기준으로 �
 */
 function toSubwayMapType(sp) {
   const lane = Array.isArray(sp?.lane) ? sp.lane : [];
-  const t = asNumber(lane?.[0]?.type);
+  const t = asNumber(lane?.[0]?.subwayCode);
   return t != null ? `SUBWAY_${t}` : "SUBWAY";
 }
 
@@ -127,7 +127,7 @@ export function toRouteCandidateDetailDto({ subPath, origin, destination }) {
         way: sp?.way ?? null,
         way_code: sp?.wayCode ?? null,
         // 노선 타입 원본(참고용)
-        subway_type: asNumber(lane?.[0]?.type),
+        subway_type: asNumber(lane?.[0]?.subwayCode),
       };
     }
 
