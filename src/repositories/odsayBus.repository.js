@@ -15,8 +15,5 @@ export async function fetchBusStationInfo({ stationID }) {
   const resp = await fetch(url);
   const data = await resp.json();
 
-  //
-  console.log("[ODsay] stationID:", data?.result?.stationID);
-
   return { ok: resp.ok, status: resp.status, data };
 }

@@ -16,9 +16,11 @@ import { getSubwayLastTimeAtStation } from "./subwayLastTime.service.js";
 import { setRouteToken } from "../utils/routeTokenStore.util.js";
 import { CustomError } from "../response/customError.js";
 import { normalizeOdsayMapObject } from "../utils/odsayMapObject.util.js";
+import { getKstParts } from "../utils/kstDate.util.js";
 
 const BASE_BUFFER = 5;
 const TRANSFER_BUFFER = 2;
+const FIRST_BOARD_BUFFER = 3;
 const LAST_BOARD_BUFFER = 3;
 
 const CANDIDATE_FETCH_N = 10;
@@ -104,36 +106,113 @@ function checkLastLegCatchable({ lastLastTimeHHMM, minutesToLastBoard }) {
   const needReadyMs =
     now.getTime() + (minutesToLastBoard + LAST_BOARD_BUFFER) * 60 * 1000;
 
-  const passed = needReadyMs <= lastDeparture.getTime();
+  const lastMs = lastDeparture?.getTime?.();
+  // 파싱 실패/Invalid Date -> 통과 + warning
+  if (!Number.isFinite(lastMs)) {
+    return {
+      passed: true,
+      reason: "LAST_LEG_LAST_TIME_INVALID",
+      lastLegDepartureAt: null,
+    };
+  }
+
+  const passed = needReadyMs <= lastMs;
 
   return {
     passed,
     reason: passed ? null : "LAST_LEG_MISSED",
-    lastLegDepartureAt: lastDeparture.toISOString(),
+    lastLegDepartureAt: new Date(lastMs).toISOString(),
   };
 }
 
-// 버스 노선번호들 추출
-function getBusNosFromLane(transitLeg) {
+// 버스 lane 정보(busNo + type) 추출
+function getBusLaneInfos(transitLeg) {
   const lane = Array.isArray(transitLeg?.lane) ? transitLeg.lane : [];
-  return lane.map((l) => l?.busNo ?? l?.busNoKor ?? null).filter(Boolean);
+  return lane
+    .map((l) => ({
+      busNo: l?.busNo ?? l?.busNoKor ?? null,
+      busType: l?.type == null ? null : Number(l.type),
+    }))
+    .filter((x) => !!x.busNo);
 }
 
-// 가장 늦은 버스 막차 조회
-async function getLatestBusLastTimeHHMM({ stationID, busNos }) {
-  if (!stationID || !Array.isArray(busNos) || busNos.length === 0) return null;
+// stationID+busNo별 막차 조회 중복 방지
+function createBusLastTimeMemo(getBusLastTimeAtStation) {
+  const memo = new Map();
+  return async function getBusLastTimeAtStationMemo({ stationID, busNo }) {
+    const sid = stationID == null ? "null" : String(Number(stationID));
+    const bn = busNo == null ? "null" : String(busNo);
+    const key = `${sid}:${bn}`;
 
-  // 너무 많으면 제한
-  const unique = Array.from(new Set(busNos)).slice(0, 5);
+    if (memo.has(key)) return memo.get(key);
 
-  const results = await Promise.all(
-    unique.map(async (busNo) => {
+    const p = (async () => {
       try {
         const hhmm = await getBusLastTimeAtStation({ stationID, busNo });
-        return hhmm ? { busNo, hhmm } : null;
+        return hhmm ?? null;
       } catch {
         return null;
       }
+    })();
+
+    memo.set(key, p);
+    return p;
+  };
+}
+
+// 지하철 시간표는 "평일/토/일(공휴)"에 따라 달라질 수 있어 dayKey 포함
+function getKstDayKey() {
+  const { day } = getKstParts(); // 0=일, 6=토
+  if (day === 6) return "SAT";
+  if (day === 0) return "SUN";
+  return "WEEKDAY";
+}
+
+function createSubwayLastTimeMemo(getSubwayLastTimeAtStation) {
+  const memo = new Map();
+  return async function getSubwayLastTimeAtStationMemo({ stationID, wayCode }) {
+    const dayKey = getKstDayKey();
+
+    const sid = stationID == null ? "null" : String(Number(stationID));
+    const wc = wayCode == null ? "null" : String(Number(wayCode));
+    const key = `${dayKey}:${sid}:${wc}`;
+
+    if (memo.has(key)) return memo.get(key);
+
+    const p = (async () => {
+      try {
+        const hhmm = await getSubwayLastTimeAtStation({ stationID, wayCode });
+        return hhmm ?? null;
+      } catch {
+        return null;
+      }
+    })();
+
+    memo.set(key, p);
+    return p;
+  };
+}
+
+// 가장 늦은 버스 막차 + (그 버스의 번호/타입) 반환
+async function getLatestBusLastTimeHHMM({
+  stationID,
+  laneInfos,
+  getBusLastTimeAtStationMemo,
+}) {
+  if (!stationID || !Array.isArray(laneInfos) || laneInfos.length === 0)
+    return null;
+
+  // busNo 기준 unique + 너무 많으면 제한
+  const byNo = new Map();
+  for (const x of laneInfos) {
+    if (x?.busNo && !byNo.has(x.busNo)) byNo.set(x.busNo, x);
+  }
+  const unique = Array.from(byNo.values()).slice(0, 5);
+
+  const results = await Promise.all(
+    unique.map(async ({ busNo, busType }) => {
+      const hhmm = await getBusLastTimeAtStationMemo({ stationID, busNo });
+      return hhmm ? { busNo, busType: busType ?? null, hhmm } : null;
     }),
   );
 
@@ -153,12 +232,50 @@ async function getLatestBusLastTimeHHMM({ stationID, busNos }) {
     }
   }
 
-  return best.hhmm;
+  return { hhmm: best.hhmm, busNo: best.busNo, busType: best.busType };
+}
+
+// BUS 구간별로 lane이 여러 개인 경우, '막차가 가장 늦은 버스'의 타입/번호 선택
+async function annotateBusStepsWithPickedType({
+  subPath,
+  getBusLastTimeAtStationMemo,
+}) {
+  const arr = Array.isArray(subPath) ? subPath : [];
+  const busSteps = arr.filter((sp) => Number(sp?.trafficType) === 2);
+
+  await Promise.all(
+    busSteps.map(async (sp) => {
+      const stationID = sp?.startID;
+      const laneInfos = getBusLaneInfos(sp);
+
+      if (!stationID || laneInfos.length === 0) return;
+
+      // lane 1개면 조회 없이 타입 고정
+      if (laneInfos.length === 1) {
+        sp._picked_bus_no = laneInfos[0].busNo ?? null;
+        sp._picked_bus_type = laneInfos[0].busType ?? null;
+        return;
+      }
+
+      const picked = await getLatestBusLastTimeHHMM({
+        stationID,
+        laneInfos,
+        getBusLastTimeAtStationMemo,
+      });
+
+      sp._picked_bus_no = picked?.busNo ?? null;
+      sp._picked_bus_type = picked?.busType ?? null;
+    }),
+  );
 }
 
 // ---------- 막차 조회 ----------
 
-async function getFirstLastTimeHHMM(firstTransit) {
+async function getFirstLastTimeHHMM({
+  firstTransit,
+  getBusLastTimeAtStationMemo,
+  getSubwayLastTimeAtStationMemo,
+}) {
   if (!firstTransit) return null;
 
   const tt = Number(firstTransit?.trafficType);
@@ -169,21 +286,38 @@ async function getFirstLastTimeHHMM(firstTransit) {
     const wayCodeRaw = firstTransit.wayCode ?? null;
     const wayCode = wayCodeRaw == null ? null : Number(wayCodeRaw);
     if (!stationID) return null;
-    return await getSubwayLastTimeAtStation({ stationID, wayCode });
+    return await getSubwayLastTimeAtStationMemo({ stationID, wayCode });
   }
 
   // 버스: lane 중 하나라도 가능하면 "가장 늦은 막차"
   if (tt === 2) {
     const stationID = firstTransit.startID;
-    const busNos = getBusNosFromLane(firstTransit);
-    if (!stationID || busNos.length === 0) return null;
-    return await getLatestBusLastTimeHHMM({ stationID, busNos });
+    const laneInfos = getBusLaneInfos(firstTransit);
+    if (!stationID || laneInfos.length === 0) return null;
+
+    const picked = await getLatestBusLastTimeHHMM({
+      stationID,
+      laneInfos,
+      getBusLastTimeAtStationMemo,
+    });
+
+    // 선택된 버스 정보를 sp에 넣음
+    if (picked) {
+      firstTransit._picked_bus_no = picked.busNo ?? null;
+      firstTransit._picked_bus_type = picked.busType ?? null;
+      return picked.hhmm;
+    }
+    return null;
   }
 
   return null;
 }
 
-async function getLastLastTimeHHMM(lastTransit) {
+async function getLastLastTimeHHMM({
+  lastTransit,
+  getBusLastTimeAtStationMemo,
+  getSubwayLastTimeAtStationMemo,
+}) {
   if (!lastTransit) return null;
 
   const tt = Number(lastTransit?.trafficType);
@@ -194,15 +328,28 @@ async function getLastLastTimeHHMM(lastTransit) {
     const wayCodeRaw = lastTransit.wayCode ?? null;
     const wayCode = wayCodeRaw == null ? null : Number(wayCodeRaw);
     if (!stationID) return null;
-    return await getSubwayLastTimeAtStation({ stationID, wayCode });
+    return await getSubwayLastTimeAtStationMemo({ stationID, wayCode });
   }
 
   // 버스: lane 중 하나라도 가능하면 "가장 늦은 막차"
   if (tt === 2) {
     const stationID = lastTransit.startID;
-    const busNos = getBusNosFromLane(lastTransit);
-    if (!stationID || busNos.length === 0) return null;
-    return await getLatestBusLastTimeHHMM({ stationID, busNos });
+    const laneInfos = getBusLaneInfos(lastTransit);
+    if (!stationID || laneInfos.length === 0) return null;
+
+    const picked = await getLatestBusLastTimeHHMM({
+      stationID,
+      laneInfos,
+      getBusLastTimeAtStationMemo,
+    });
+
+    // 색상 일관성을 위해 선택된 버스 정보를 sp에 넣음
+    if (picked) {
+      lastTransit._picked_bus_no = picked.busNo ?? null;
+      lastTransit._picked_bus_type = picked.busType ?? null;
+      return picked.hhmm;
+    }
+    return null;
   }
 
   return null;
@@ -319,11 +466,12 @@ function selectTopCandidates({ candidates }) {
   // pathType 우선순위
   const typePriority = [1, 2, 3];
 
+  // 2) 타입별 대표 선정
   for (const t of typePriority) {
     const group = byType.get(t);
     if (!group || group.length === 0) continue;
 
-    // 2) 승/하차 기준 그룹화
+    // 승/하차 기준 그룹화
     const byStops = new Map(); // key -> array
     for (const c of group) {
       const key = c?.meta?.stop_group_key;
@@ -332,7 +480,7 @@ function selectTopCandidates({ candidates }) {
       byStops.get(key).push(c);
     }
 
-    // 3) 그룹별 대표 뽑기 -> 그 중 다시 best 1개
+    // 그룹별 대표 뽑기 -> 그 중 다시 best 1개
     const representatives = [];
     for (const arr of byStops.values()) {
       const rep = pickBest(arr);
@@ -342,7 +490,44 @@ function selectTopCandidates({ candidates }) {
     const bestOfType = pickBest(representatives);
     if (bestOfType) picked.push(bestOfType);
 
-    if (picked.length >= PICK_MAX) break;
+    if (picked.length >= PICK_MAX) return picked.slice(0, PICK_MAX);
+  }
+
+  // 3) 부족하면 나머지 후보로 채우기
+  if (picked.length < PICK_MAX) {
+    const pickedKeys = new Set(picked.map((c) => c.candidate_key));
+
+    // pickBest 우선순위로 정렬
+    const rest = candidates
+      .filter((c) => c && !pickedKeys.has(c.candidate_key))
+      .filter((c) => c.is_supported !== false && c.is_possible !== false)
+      .sort((a, b) => {
+        const toMs = (iso) => {
+          const t = iso ? new Date(iso).getTime() : NaN;
+          return Number.isFinite(t) ? t : -Infinity;
+        };
+
+        const ad = toMs(a?.card?.deadline_at);
+        const bd = toMs(b?.card?.deadline_at);
+        if (ad !== bd) return bd - ad; // deadline 늦은게 먼저
+
+        const at = a?.card?.traveled_time ?? Infinity;
+        const bt = b?.card?.traveled_time ?? Infinity;
+        if (at !== bt) return at - bt;
+
+        const atr = a?.card?.transfer_count ?? Infinity;
+        const btr = b?.card?.transfer_count ?? Infinity;
+        if (atr !== btr) return atr - btr;
+
+        const aw = a?.card?.walk_time ?? Infinity;
+        const bw = b?.card?.walk_time ?? Infinity;
+        return aw - bw;
+      });
+
+    for (const c of rest) {
+      picked.push(c);
+      if (picked.length >= PICK_MAX) break;
+    }
   }
 
   return picked.slice(0, PICK_MAX);
@@ -381,6 +566,17 @@ export async function getRouteCandidates({ origin, destination }) {
   const resultSearchType = data?.result?.searchType;
   const paths = data.result.path.slice(0, CANDIDATE_FETCH_N);
 
+  console.log("[candidates] searchType=", resultSearchType);
+  console.log("[candidates] odsay path count=", data.result.path.length);
+  console.log("[candidates] using slice count=", paths.length);
+
+  const getBusLastTimeAtStationMemo = createBusLastTimeMemo(
+    getBusLastTimeAtStation,
+  );
+  const getSubwayLastTimeAtStationMemo = createSubwayLastTimeMemo(
+    getSubwayLastTimeAtStation,
+  );
+
   // 1) 후보 생성(지원 필터 + 막차계산 + DTO 생성)
   const computed = await Promise.all(
     paths.map(async (p, idx) => {
@@ -393,8 +589,20 @@ export async function getRouteCandidates({ origin, destination }) {
         subPath,
       });
       if (!support.is_supported) {
+        console.log("[candidates][drop][unsupported]", {
+          idx,
+          reason: support.reason,
+          message: support.message,
+          pathType: p?.pathType,
+        });
         return null; // 미지원은 제외
       }
+
+      // 모든 BUS step에 대해 lane 여러 개면 "막차가 가장 늦은 버스"의 타입/번호 선택
+      await annotateBusStepsWithPickedType({
+        subPath,
+        getBusLastTimeAtStationMemo,
+      });
 
       const transfer_count = calcTransferCount(subPath);
       const walk_time = calcWalkTime(subPath);
@@ -407,36 +615,45 @@ export async function getRouteCandidates({ origin, destination }) {
       let deadline_at = null;
       let minutes_left = null;
       let is_possible = true;
+      const warnings = [];
 
-      const first_last_time = await getFirstLastTimeHHMM(firstTransit);
+      const first_last_time = await getFirstLastTimeHHMM({
+        firstTransit,
+        getBusLastTimeAtStationMemo,
+        getSubwayLastTimeAtStationMemo,
+      });
 
-      if (idx === 0)
-        console.log(
-          "[debug] first_last_time=",
-          first_last_time,
-          typeof first_last_time,
-        );
+      const minutes_to_first_board = firstTransit
+        ? minutesUntilLegStarts(subPath, firstTransit)
+        : 0;
 
       if (first_last_time) {
         const dl = computeDeadline({
           firstLastTimeHHMM: first_last_time,
           bufferMinutes,
+          minutesToFirstBoard: minutes_to_first_board,
+          firstBoardBufferMinutes: FIRST_BOARD_BUFFER,
         });
         deadline_at = dl.deadlineAt;
         minutes_left = dl.minutesLeft;
         is_possible = dl.isPossible;
+        if (dl.reason) warnings.push(dl.reason);
       } else {
+        // 첫 막차 시간이 없으면 불가능
         is_possible = false;
+        warnings.push("FIRST_LEG_LAST_TIME_UNKNOWN");
       }
 
       // ---------- 2) 마지막 구간 탑승 가능 여부 체크 ----------
-      const warnings = [];
-
       const minutes_to_last_board = lastTransit
         ? minutesUntilLegStarts(subPath, lastTransit)
         : 0;
 
-      const last_last_time = await getLastLastTimeHHMM(lastTransit);
+      const last_last_time = await getLastLastTimeHHMM({
+        lastTransit,
+        getBusLastTimeAtStationMemo,
+        getSubwayLastTimeAtStationMemo,
+      });
 
       const lastCheck = checkLastLegCatchable({
         lastLastTimeHHMM: last_last_time,
@@ -501,8 +718,13 @@ export async function getRouteCandidates({ origin, destination }) {
 
   const supportedCandidates = computed.filter(Boolean);
 
+  console.log("[candidates] computed total=", computed.length);
+  console.log("[candidates] supportedCandidates=", supportedCandidates.length);
+
   // 최종 3개 선택
   const picked = selectTopCandidates({ candidates: supportedCandidates });
+
+  console.log("[candidates] picked=", picked.length);
 
   // 최적 1개 표시
   markOptimalCandidate(picked);
@@ -521,18 +743,22 @@ export async function getRouteCandidates({ origin, destination }) {
 
     const route_token = generateRouteToken();
 
-    setRouteToken(route_token, {
-      mapObj, // polyline 생성용(loadLane)
-      snapshot: {
-        // 알림 저장용
-        origin,
-        destination,
-        tags: c.tags,
-        station_id: c.station_id,
-        card: c.card,
-        detail: c.detail,
+    setRouteToken(
+      route_token,
+      {
+        mapObj, // polyline 생성용(loadLane)
+        snapshot: {
+          // 알림 저장용
+          origin,
+          destination,
+          tags: c.tags,
+          station_id: c.station_id,
+          card: c.card,
+          detail: c.detail,
+        },
       },
-    });
+      30 * 60,
+    ); // 30분 TTL
 
     c.route_token = route_token;
   }

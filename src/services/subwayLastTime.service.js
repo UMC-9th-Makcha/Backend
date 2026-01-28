@@ -1,10 +1,10 @@
 import { fetchSubwaySchedule } from "../repositories/odsaySubway.repository.js";
+import { getKstParts } from "../utils/kstDate.util.js";
 
+// 한국(KST) 기준
 // 오늘 요일 기준으로 어떤 시간표 블록을 쓸지 결정
-
 function pickScheduleBlock(result) {
-  const now = new Date();
-  const day = now.getDay(); // 0:일, 6:토
+  const { day } = getKstParts(); // 0=일 ~ 6=토 (KST 기준)
 
   if (day === 6) return result.saturdaySchedule; // 토요일
   if (day === 0) return result.holidaySchedule; // 일요일(공휴일 포함)
@@ -20,7 +20,7 @@ function normalizeHHMM(t) {
   const hh = Number(m[1]);
   const mm = Number(m[2]);
   if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
-  if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+  if (hh < 0 || hh > 28 || mm < 0 || mm > 59) return null;
 
   return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
 }
@@ -34,7 +34,7 @@ function toMin(hhmm) {
 
 /*
 scheduleBlock 안에서 (up/down) 방향의 막차 시간을 찾음
-여러 개면 "가장 늦은 시간"을 막차로 취급
+여러 개면 가장 늦은 시간
 */
 function extractLastTimeFromDirection(list) {
   if (!Array.isArray(list)) return null;
@@ -79,9 +79,21 @@ function extractLastTimeFromDirection(list) {
 - "HH:MM" (막차 출발 시각) 또는 null
 */
 export async function getSubwayLastTimeAtStation({ stationID, wayCode }) {
+  console.log("[subway][input]", {
+    stationID,
+    wayCode,
+    wayCodeType: typeof wayCode,
+  });
   const { ok, status, data } = await fetchSubwaySchedule({
     stationID,
     wayCode,
+  });
+
+  console.log("[subway][odsay response]", {
+    ok,
+    status,
+    hasError: !!data?.error,
+    hasResult: !!data?.result,
   });
 
   if (!ok) {
