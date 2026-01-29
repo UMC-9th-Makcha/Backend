@@ -205,6 +205,10 @@ router.post('/phone/send', isLoggedIn, phoneController.send);
  */
 router.post('/phone/verify', isLoggedIn, phoneController.verify);
 
-
+//백엔드 테스트용 -> 프론트 사용X.
+router.get(
+    '/auth/kakao/test-callback',
+    authController.kakaoTestCallback
+  );
 
 export default router;
