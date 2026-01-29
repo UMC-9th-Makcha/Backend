@@ -107,10 +107,12 @@ export const updateSettings = async (user_id, timeList) => {
 
 export const checkAndSendNotifications = async () => {
     const currentTime = new Date();
+    let notifications; //try 밖에서 선언함.(try 밖에서 변수 선언 -> try 안에서 값을 할당하도록)
 
     try {
         // 1. 아직 발송 완료되지 않은(sent_success: false) 알림들 조회
-        const notifications = await notiRepo.findPendingNotifications(currentTime);
+        notifications = await notiRepo.findPendingNotifications(currentTime);
+        // const notifications = await notiRepo.findPendingNotifications(currentTime);
     } catch (error) {
         throw new CustomError(
             "COM-500-001",
