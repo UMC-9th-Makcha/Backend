@@ -5,7 +5,7 @@ const router = express.Router();
 
 /**
  * @swagger
- * /alerts:
+ * /api/alerts:
  *   post:
  *     summary: 막차 알림 예약 생성
  *     description: |
@@ -43,7 +43,7 @@ router.post("/", notiController.createNotification);
 
 /**
  * @swagger
- * /alerts/{notification_id}/cancel:
+ * /api/alerts/{notification_id}/cancel:
  *   patch:
  *     summary: 막차 알림 예약 취소
  *     description: |
@@ -72,7 +72,7 @@ router.patch("/:notification_id/cancel", notiController.cancelNotification);
 
 /**
  * @swagger
- * /alerts/settings:
+ * /api/alerts/settings:
  *   get:
  *     summary: 알림 설정 조회
  *     description: |
@@ -91,7 +91,7 @@ router.get("/settings", notiController.getSettings);
 
 /**
  * @swagger
- * /alerts/settings:
+ * /api/alerts/settings:
  *   patch:
  *     summary: 알림 설정 수정
  *     description: |
@@ -121,7 +121,7 @@ router.patch("/settings", notiController.updateSettings);
 
 /**
  * @swagger
- * /alerts/history:
+ * /api/alerts/history:
  *   get:
  *     summary: 과거 알림 통합 조회
  *     description: |
