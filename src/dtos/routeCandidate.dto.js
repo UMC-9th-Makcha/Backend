@@ -25,17 +25,20 @@ function asNumber(v) {
 }
 
 function toPointsFromSp(sp) {
-  // X=lng, Y=lat
-  const sy = asNumber(sp?.startY);
-  const sx = asNumber(sp?.startX);
-  const ey = asNumber(sp?.endY);
-  const ex = asNumber(sp?.endX);
+  const points = [];
+  const lane = Array.isArray(sp?.lane) ? sp.lane : [];
 
-  if (sy == null || sx == null || ey == null || ex == null) return [];
-  return [
-    { lat: sy, lng: sx },
-    { lat: ey, lng: ex },
-  ];
+  const sx = sp?.startX ?? sp?.sx ?? null;
+  const sy = sp?.startY ?? sp?.sy ?? null;
+  const ex = sp?.endX ?? sp?.ex ?? null;
+  const ey = sp?.endY ?? sp?.ey ?? null;
+
+  if (sy != null && sx != null)
+    points.push({ lat: Number(sy), lng: Number(sx) });
+  if (ey != null && ex != null)
+    points.push({ lat: Number(ey), lng: Number(ex) });
+
+  return points;
 }
 
 /*
@@ -45,15 +48,32 @@ lane이 여러 개일 수 있지만 보통 1개이므로 0번을 기준으로 �
 */
 function toSubwayMapType(sp) {
   const lane = Array.isArray(sp?.lane) ? sp.lane : [];
-  const t = asNumber(lane?.[0]?.type);
+  const t = asNumber(lane?.[0]?.subwayCode);
   return t != null ? `SUBWAY_${t}` : "SUBWAY";
 }
 
-/*
-버스 map_type: BUS (통일)
-lane[]에 여러 버스가 들어올 수 있고, type 섞일 가능성도 있어 통일
-*/
-function toBusMapType() {
+//버스 map_type: BUS_{color}
+function toBusMapType(sp) {
+  const picked = sp?._picked_bus_type;
+  const pickedType = picked == null ? null : Number(picked);
+  if (Number.isFinite(pickedType)) return busTypeToMapType(pickedType);
+
+  // fallback: lane 첫 번째 타입
+  const lane = Array.isArray(sp?.lane) ? sp.lane : [];
+  const t = lane[0]?.type == null ? null : Number(lane[0].type);
+  if (Number.isFinite(t)) return busTypeToMapType(t);
+
+  // 알 수 없으면  "BUS"로 fallback
+  return "BUS";
+}
+
+// ODsay 버스 타입 -> mapType(색) 매핑
+function busTypeToMapType(t) {
+  if (t === 4 || t === 6 || t === 14 || t === 15) return "BUS_RED"; // 직행/간선급행/광역/급행
+  if (t === 11) return "BUS_BLUE"; // 간선
+  if (t === 5) return "BUS_SKY"; // 공항
+  if (t === 13) return "BUS_ORANGE"; // 순환
+  if (t === 1 || t === 2 || t === 3 || t === 12) return "BUS_GREEN"; // 일반/좌석/마을/지선
   return "BUS";
 }
 
@@ -107,7 +127,7 @@ export function toRouteCandidateDetailDto({ subPath, origin, destination }) {
         way: sp?.way ?? null,
         way_code: sp?.wayCode ?? null,
         // 노선 타입 원본(참고용)
-        subway_type: asNumber(lane?.[0]?.type),
+        subway_type: asNumber(lane?.[0]?.subwayCode),
       };
     }
 
@@ -116,7 +136,7 @@ export function toRouteCandidateDetailDto({ subPath, origin, destination }) {
       const lane = Array.isArray(sp?.lane) ? sp.lane : [];
 
       return {
-        type: toBusMapType(),
+        type: toBusMapType(sp),
         points: toPointsFromSp(sp),
         section_time: sp?.sectionTime ?? null,
         distance: sp?.distance ?? null,

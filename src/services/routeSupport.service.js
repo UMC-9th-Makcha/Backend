@@ -2,7 +2,7 @@
 const SUPPORTED_TRAFFIC_TYPES = new Set([1, 2, 3]); // 1:지하철 2:버스 3:도보
 
 // 미지원 버스
-const UNSUPPORTED_BUS_TYPES = new Set([16, 20, 22, 26, 30]);
+const UNSUPPORTED_BUS_TYPES = new Set([10, 16, 20, 22, 26, 30]);
 
 // 미지원 지하철
 const UNSUPPORTED_SUBWAY_TYPES = new Set([
