@@ -1,8 +1,8 @@
 import { WaitingPlaceSearchDto } from '../dtos/request/waitingPlaceSearch.dto.js';
 import { DirectionsDto } from '../dtos/request/directions.dto.js';
 import { DeepLinkDto } from '../dtos/request/deepLink.dto.js';
-import { CustomSuccess } from '../utils/customSuccess.js'; 
-import { CustomError } from '../utils/customError.js'; 
+import { CustomSuccess } from '../response/customSuccess.js'; 
+import { CustomError } from '../response/customError.js';
 
 class WaitingPlaceController {
   constructor(waitingPlaceService) {
