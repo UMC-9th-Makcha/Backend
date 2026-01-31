@@ -5,13 +5,16 @@ import { CustomError } from "../response/customError.js";
 import { insertPlace,
     patchPlace,
     findPlace,
-    deletePlace
+    deletePlace,
+    findMyPlacesByUserId
  } from "../repositories/place.repository.js";
 
 // create
 export const createPlace = async (payload) => {
     try {
-        return await insertPlace(payload);
+        const created = await insertPlace(payload);
+        return { ...created, myplace_id: String(created.myplace_id), user_id: String(created.user_id) };
+
     } catch (err) {
         if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
             const e = new CustomError(
@@ -76,7 +79,7 @@ export const updatePlace = async ({user_id, myplace_id, data}) => {
         throw e;
     }
 
-    return updated;
+    return { ...updated, myplace_id: String(updated.myplace_id), user_id: String(updated.user_id) };
 };
 
 // delete
@@ -109,4 +112,42 @@ export const removePlace = async ({ user_id, myplace_id }) => {
     }
 
     return { myplace_id: String(myplace_id) };
+}
+
+// GET /api/myplaces - HOME + PLACE 통합 조회
+export const getMyPlaces = async (user_id) => {
+    if (!user_id) {
+        const e = new CustomError("AUTH-401-000", "Unauthorized", "/places");
+        e.statusCode = 401;
+        throw e;
+    }
+
+    const rows = await findMyPlacesByUserId({ user_id });
+
+    const normalized = rows.map((r) => ({
+    ...r,
+    myplace_id: String(r.myplace_id),
+    user_id: String(r.user_id),
+    }));
+
+    const homes = normalized.filter((r) => r.place_type === "HOME");
+    const places = normalized.filter((r) => r.place_type === "PLACE");
+
+
+    const home =
+        homes.length === 0
+        ? null
+        : homes
+            .slice()
+            .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))[0];
+    
+    // PLACE 정렬(최신순)
+    const sortedPlaces = places
+        .slice()
+        .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+
+    return {
+        home,
+        places: sortedPlaces,
+    }
 }

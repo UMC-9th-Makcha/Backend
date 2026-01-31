@@ -2,11 +2,13 @@ import authService from '../services/auth.service.js';
 import { CustomSuccess } from '../response/customSuccess.js';
 import { CustomError } from '../response/customError.js'; //공통 응답 구조 사용함.
 
+const isProd = process.env.NODE_ENV === 'production'; //http 상태(웹 미배포)에서도 쿠키를 브라우저에서 받을 수 있도록 함.
 
 //POST /auth/kakao 카카오 로그인 컨트롤러
 const kakaoLogin = async (req, res, next) => {
     try {
-      const { code } = req.body;
+      // const { code } = req.body;
+      const { code, redirectUri } = req.body;  // redirectUri를 파라미터를 받을 수 있도록 추가
   
       if (!code) {
         throw new CustomError(
@@ -15,14 +17,17 @@ const kakaoLogin = async (req, res, next) => {
           req.originalUrl
         );
       }
-  
-      const result = await authService.kakaoLogin(code);
+      
+      // redirectUri를 service로 전달
+      const result = await authService.kakaoLogin(code, redirectUri);
   
       // Refresh Token 쿠키 저장
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'none',
+        secure: isProd, 
+        // secure: true,
+        sameSite: isProd ? 'none' : 'lax', 
+        // sameSite: 'none',
       });
   
       const response = new CustomSuccess(
@@ -55,8 +60,10 @@ const kakaoLogin = async (req, res, next) => {
   
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'none',
+        secure: isProd,
+        // secure: true,
+        sameSite: isProd ? 'none' : 'lax', 
+        //sameSite: 'none',
       });
   
       const response = new CustomSuccess(
@@ -82,8 +89,8 @@ const logout = async (req, res, next) => {
     // refreshToken 쿠키 삭제
     res.clearCookie('refreshToken', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
     });
 
     const response = new CustomSuccess(
@@ -108,8 +115,8 @@ const withdraw = async (req, res, next) => {
     // refreshToken 쿠키 삭제
     res.clearCookie('refreshToken', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
     });
 
     const response = new CustomSuccess(
@@ -123,7 +130,21 @@ const withdraw = async (req, res, next) => {
     next(err);
   }
 };
-  
-  
-  export default { kakaoLogin, refresh, logout, withdraw };
+
+// 백엔드 테스트 용도. -> 프론트 사용 X
+const kakaoTestCallback = (req, res) => {
+  const { code, error } = req.query;
+
+  if (error) {
+    return res.send(`<h2>❌ Kakao Error</h2><p>${error}</p>`);
+  }
+
+  return res.send(`
+    <h2> Kakao Auth Test Success</h2>
+    <p><b>code:</b> ${code}</p>
+    <p>이 code를 Postman에 넣어주세요.</p>
+  `);
+};
+
+export default { kakaoLogin, refresh, logout, withdraw,kakaoTestCallback };
 

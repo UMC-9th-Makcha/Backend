@@ -185,7 +185,7 @@ model UserNotificationSetting {
   enabled                      Boolean
   notify_mask                  Int
   created_at                   DateTime  @default(now())
-  updated_at                   DateTime?
+  updated_at                   DateTime? @updatedAt
 
   user User @relation(fields: [user_id], references: [user_id])
 }

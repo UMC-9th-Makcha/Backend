@@ -1,12 +1,7 @@
 import { Router } from 'express';
-import FacilityController from '../controllers/facility.controller.js';
-import FacilityService from '../services/facility.service.js';
+import facilityController from '../controllers/facility.controller.js';
 
 const router = Router();
-
-// 서비스와 컨트롤러 인스턴스 생성
-const facilityService = new FacilityService();
-const facilityController = new FacilityController(facilityService);
 
 /**
  * @swagger
@@ -55,9 +50,7 @@ const facilityController = new FacilityController(facilityService);
  *       500:
  *         description: 서버 오류
  */
-router.get('/search', (req, res, next) => 
-  facilityController.searchFacilities(req, res, next)
-);
+router.get('/search', facilityController.searchFacilities);
 
 /**
  * @swagger
@@ -106,8 +99,6 @@ router.get('/search', (req, res, next) =>
  *       404:
  *         description: 해당 카테고리를 찾을 수 없음
  */
-router.get('/category/:categoryType', (req, res, next) => 
-  facilityController.searchByCategory(req, res, next)
-);
+router.get('/category/:categoryType', facilityController.searchByCategory);
 
 export default router;
