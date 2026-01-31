@@ -14,6 +14,8 @@ import myinfoRouter from "./routes/myinfo.route.js";
 import saveReportRouter from "./routes/saveReports.route.js";
 import { globalErrorHandler } from "./middleware/error.middleware.js";
 import routeCandidateRouter from "./routes/routeCandidate.route.js";
+import facilityRouter from "./routes/facility.route.js";
+import routeRouter from "./routes/route.route.js";
 
 const app = express();
 
@@ -39,10 +41,10 @@ app.use("/api", placeRouter);
 app.use("/api/save-reports", saveReportRouter);
 app.use("/api/me", myinfoRouter);
 app.use("/api/save-reports", saveReportRouter);
-
+app.use("/api/facility", facilityRouter);  
+app.use("/api/routes", routeRouter);   
 app.use("/api/routes", routeCandidateRouter);
 
-// Swagger -> ui적으로 보완했는데 팀장님 확인 한 번 부탁드립니다!
 app.use(
   "/api-docs",
   swaggerUi.serve,
