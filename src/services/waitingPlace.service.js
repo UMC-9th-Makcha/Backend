@@ -1,6 +1,6 @@
 import { WaitingPlaceResponseDto } from '../dtos/response/waitingPlace.dto.js';
 import { appConfig } from '../config/app.config.js';
-import { CustomError } from '../utils/customError.js'; 
+import { CustomError } from '../response/customError.js';
 
 class WaitingPlaceService {
   constructor(kakaoClient, distanceUtil, timeUtil) {
