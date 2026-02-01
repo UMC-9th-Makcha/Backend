@@ -6,16 +6,21 @@ import { CustomError } from '../response/customError.js';
 /**
  * 카카오 로그인 서비스
  * @param {string} code - 카카오 인가 코드
+ * @param {string} redirectUri - 프론트에서 인가코드 받을 때 사용한 redirect URI (선택)
  */
-const kakaoLogin = async (code) => {
+const kakaoLogin = async (code, redirectUri ) => { // redirectUri 파라미터 추가
   try {
+
+    // redirectUri가 없으면 .env 기본값 사용
+    const finalRedirectUri = redirectUri || process.env.KAKAO_REDIRECT_URI;
+    
     // 카카오 Access Token 발급 진행.
     const tokenRes = await axios.post(
       'https://kauth.kakao.com/oauth/token',
       new URLSearchParams({
         grant_type: 'authorization_code',
         client_id: process.env.KAKAO_CLIENT_ID,
-        redirect_uri: process.env.KAKAO_REDIRECT_URI,
+        redirect_uri: finalRedirectUri, //동적으로 처리하도록 함.
         code,
       }),
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
@@ -169,5 +174,7 @@ const withdraw = async (user) => {
     );
   }
 };
+
+
 
 export default { kakaoLogin, refresh, logout, withdraw };
