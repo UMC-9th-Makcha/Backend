@@ -1,10 +1,18 @@
 import { Router } from 'express';
 import FacilityController from '../controllers/facility.controller.js';
+import FacilityService from '../services/facility.service.js';
+import KakaoMapClient from '../clients/kakaoMap.client.js';   // 정확한 파일명으로 수정
+import { DistanceUtil } from '../utils/distance.util.js';
 
 const router = Router();
 
-// 👇 컨트롤러 인스턴스 생성 (서비스는 null로 전달 - TODO에서 구현 예정이므로)
-const facilityController = new FacilityController(null);
+// 의존성 주입: KakaoMapClient, DistanceUtil 생성 후 FacilityService에 전달
+const kakaoClient = new KakaoMapClient();
+const distanceUtil = new DistanceUtil();
+const facilityService = new FacilityService(kakaoClient, distanceUtil);
+
+// 컨트롤러 인스턴스 생성 (FacilityService 주입)
+const facilityController = new FacilityController(facilityService);
 
 /**
  * @swagger
