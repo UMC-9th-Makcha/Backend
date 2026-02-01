@@ -76,6 +76,16 @@ const getBitByTime = (min) => {
     return 0;
 }
 
+const bitToTimeList = (mask) => {
+  const result = [];
+  if (mask & 1) result.push(1);
+  if (mask & 2) result.push(3);
+  if (mask & 4) result.push(5);
+  if (mask & 8) result.push(10);
+  if (mask & 16) result.push(30);
+  return result;
+};
+
 // 마이페이지 (커스텀 설정)
 export const getMySettings = async (user_id) => {
     await notiRepo.ensureUserSetting(user_id);
@@ -95,7 +105,10 @@ export const getMySettings = async (user_id) => {
     return {
         user_id: String(settings.user_id),
         notify_mask: settings.notify_mask,
-        enabled: settings.enabled
+        enabled: settings.enabled,
+        timeList: settings.enabled
+        ? bitToTimeList(settings.notify_mask)
+        : []
     };
 };
 
@@ -127,7 +140,6 @@ export const checkAndSendNotifications = async () => {
     }
 
     if (!notifications || notifications.length === 0) return;
-
     for (const noti of notifications) {
         try {
             // noti.scheduled (막차 시간) 기준으로 차이 계산
@@ -135,6 +147,7 @@ export const checkAndSendNotifications = async () => {
             const diffMin = Math.floor(diffMs / 60000);
 
             let message = "";
+            let shouldUpdateStatus = false;
             let nextTrigger = noti.trigger_time;
 
             // 마이페이지에서 설정한 경우 (커스텀모드)
@@ -142,12 +155,11 @@ export const checkAndSendNotifications = async () => {
 
             if (userSetting && userSetting.enabled && userSetting.notify_mask > 0) {
                 const currentBit = getBitByTime(diffMin);
-
-                //유저가 설정한 비트와 현재 남은 시간 비트가 일치하는지 확인
-                if ((userSetting.notify_mask & currentBit) !== 0) {
+                if (currentBit > 0 && (userSetting.notify_mask & currentBit) !== 0) {
                     // 도달하는 '분'에 보냈는지 체크
                     if (noti.last_sent_min != diffMin) {
                         message = `막차 출발 ${diffMin}분 전입니다.`;
+                        shouldUpdateStatus = true;
                     }
                 }
             }
@@ -158,38 +170,31 @@ export const checkAndSendNotifications = async () => {
                 if (noti.trigger_time === 'SENT_THIRTY' && diffMin <= 30) {
                     message = "막차 출발 30분 전입니다.";
                     nextTrigger = 'SENT_TEN';
+                    shouldUpdateStatus = true;
                 } 
                 else if (noti.trigger_time === 'SENT_TEN' && diffMin <= 10) {
                     message = "막차 출발 10분 전입니다.";
                     nextTrigger = 'SENT_THREE';
+                    shouldUpdateStatus = true;
                 } 
                 else if (noti.trigger_time === 'SENT_THREE' && diffMin <= 3) {
                     message = "막차 출발 3분 전입니다.";
                     nextTrigger = 'SENT_NOW';
+                    shouldUpdateStatus = true;
                 } 
             }
 
-            if (noti.trigger_time === 'SENT_NOW' && diffMin <= 15) { // 적절한 실시간 감시 범위
-                const isRealTimeMatch = await checkSubwayRealtime(noti);
-                
-                if (isRealTimeMatch === null) {
-                    throw new CustomError(
-                        "MAP-404-001",
-                        "실시간 역 정보를 찾을 수 없습니다.",
-                        "api/checkSubwayRealtime", //추후 수정 필요
-                        { station: noti.station_id }
-                    );
-                }
-
-                if (isRealTimeMatch) {
-                    message = "지금 당장 출발하세요! (실시간 분석 완료)";
-                    nextTrigger = null;
-                    // 마지막 단계이므로 nextTrigger는 그대로 null
-                }
+                if (noti.trigger_time === 'SENT_NOW' && diffMin <= 0) {
+                // 15분 전부터 '실시간 모니터링' 상태라고 가정
+                if (diffMin <= 0) { // Deadline(나갈 시간)이 되었거나 지났을 때
+                    message = "지금 당장 출발하세요! 계산된 막차 탑승 마지노선입니다.";
+                    nextTrigger = null; // 알림 종료
+                    shouldUpdateStatus = true;
+            }
             }
 
             // 3. 메시지가 결정되었다면 문자 발송 및 DB 업데이트
-            if (message) {
+            if (shouldUpdateStatus && message) {
                 const userPhone = noti.user?.phone_number;
 
                 if (userPhone) {
