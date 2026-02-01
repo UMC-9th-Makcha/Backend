@@ -63,16 +63,8 @@ class FacilityController {
         keyword: keyword || ''
       };
 
-      // TODO: 실제 서비스 로직 연결 필요
-      // const result = await this.service.searchFacilities(searchParams);
-      
-      // 임시 응답 (서비스 구현 전까지)
-      const result = {
-        facilities: [],
-        total: 0,
-        searchParams: searchParams,
-        message: '시설 검색 기능 구현 예정'
-      };
+      // 실제 서비스 로직 호출
+      const result = await this.service.searchFacilities(searchParams);
 
       const response = new CustomSuccess(
         'FAC-200-001',
@@ -144,17 +136,8 @@ class FacilityController {
         radius: radius ? parseInt(radius) : 1000
       };
 
-      // TODO: 실제 서비스 로직 연결 필요
-      // const result = await this.service.searchByCategory(searchParams);
-      
-      // 임시 응답 (서비스 구현 전까지)
-      const result = {
-        category: categoryType,
-        facilities: [],
-        total: 0,
-        searchParams: searchParams,
-        message: '카테고리별 시설 검색 기능 구현 예정'
-      };
+      // 실제 서비스 로직 호출
+      const result = await this.service.searchByCategory(searchParams);
 
       const response = new CustomSuccess(
         'FAC-200-002',
