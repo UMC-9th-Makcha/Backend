@@ -78,6 +78,8 @@ const getBitByTime = (min) => {
 
 // 마이페이지 (커스텀 설정)
 export const getMySettings = async (user_id) => {
+    await notiRepo.ensureUserSetting(user_id);
+
     const settings = await notiRepo.getMySettings(user_id);
 
     if (!settings) {
@@ -98,6 +100,8 @@ export const getMySettings = async (user_id) => {
 };
 
 export const updateSettings = async (user_id, timeList) => {
+    await notiRepo.ensureUserSetting(user_id);
+
     if (!timeList || timeList.length === 0) {
         return await notiRepo.updateSettings(user_id, { notify_mask: 0, enabled: false });
     }
