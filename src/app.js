@@ -40,7 +40,7 @@ app.use("/api", recentDestinationRouter);
 app.use("/api", placeRouter);
 app.use("/api/save-reports", saveReportRouter);
 app.use("/api/me", myinfoRouter);
-app.use("/api/facility", facilityRouter);  
+app.use("/api/facilities", facilityRouter);  
 app.use("/api/route", routeRouter);   
 app.use("/api/routes", routeCandidateRouter);
 

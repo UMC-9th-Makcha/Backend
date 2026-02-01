@@ -3,7 +3,7 @@ import FacilityController from '../controllers/facility.controller.js';
 
 const router = Router();
 
-// 👇 컨트롤러 인스턴스 생성 (서비스는 null로 전달 - TODO에서 구현 예정이므로)
+// 컨트롤러 인스턴스 생성 (서비스는 null로 전달 - TODO에서 구현 예정이므로)
 const facilityController = new FacilityController(null);
 
 /**
