@@ -1,5 +1,6 @@
 import express from "express";
 import * as notiController from "../controllers/notification.controller.js";
+import { isLoggedIn } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
@@ -39,7 +40,7 @@ const router = express.Router();
  *         description: 만료되었거나 유효하지 않은 경로 정보
  */
 // 알림 예약 생성
-router.post("/", notiController.createNotification);
+router.post("/", isLoggedIn, notiController.createNotification);
 
 /**
  * @swagger
@@ -68,7 +69,7 @@ router.post("/", notiController.createNotification);
  *         description: 알림 정보 없음
  */
 // 알림 예약 취소
-router.patch("/:notification_id/cancel", notiController.cancelNotification);
+router.patch("/:notification_id/cancel", isLoggedIn, notiController.cancelNotification);
 
 /**
  * @swagger
@@ -87,7 +88,7 @@ router.patch("/:notification_id/cancel", notiController.cancelNotification);
  *         description: 알림 설정 정보 없음
  */
 // 알림 설정 조회
-router.get("/settings", notiController.getSettings);
+router.get("/settings", isLoggedIn, notiController.getSettings);
 
 /**
  * @swagger
@@ -117,7 +118,7 @@ router.get("/settings", notiController.getSettings);
  *         description: 알림 설정 수정 성공
  */
 // 알림 설정 수정
-router.patch("/settings", notiController.updateSettings);
+router.patch("/settings", isLoggedIn, notiController.updateSettings);
 
 /**
  * @swagger
@@ -134,6 +135,6 @@ router.patch("/settings", notiController.updateSettings);
  *         description: 알림 통합 정보 조회 성공
  */
 // 과거 알림 내역 조회
-router.get("/history", notiController.getNotificationHistoryView);
+router.get("/history", isLoggedIn, notiController.getNotificationHistoryView);
 
 export default router;
