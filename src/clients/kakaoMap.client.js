@@ -15,42 +15,41 @@ class KakaoMapClient {
   }
 
   async getPlaceDetail(placeId) {
-  try {
-    const response = await this.axiosInstance.get(
-      `${this.config.baseURL.local}/search/keyword.json`,
-      {
-        params: {
-          query: placeId,
-          size: 1
-        }
+    try {
+      // placeId를 키워드로 검색
+      const response = await this.searchPlacesByKeyword({
+        lat: 37.5665,  // 임시 좌표
+        lng: 126.9780,
+        radius: 20000,
+        keyword: placeId
+      });
+      
+      // ID가 일치하는 장소 찾기
+      const place = response.places.find(p => p.id === placeId);
+      
+      if (!place) {
+        return null;  // 장소를 못 찾으면 null 반환
       }
-    );
-
-    const place = response.data.documents[0];
-    
-    if (!place) {
-      return null;
+      
+      return {
+        id: place.id,
+        name: place.name,
+        location: {
+          lat: place.lat,
+          lng: place.lng
+        },
+        address: place.address,
+        roadAddress: place.roadAddress,
+        phoneNumber: place.phoneNumber || null,
+        placeUrl: place.placeUrl || `https://place.map.kakao.com/${placeId}`,
+        categoryName: place.category || '',
+        isOpen24Hours: place.isOpen24Hours,
+        source: 'kakao'
+      };
+    } catch (error) {
+      throw this._handleError(error, 'PLACE_DETAIL_FAILED');
     }
-
-    return {
-      id: place.id,
-      name: place.place_name,
-      location: {
-        lat: parseFloat(place.y),
-        lng: parseFloat(place.x)
-      },
-      address: place.address_name,
-      roadAddress: place.road_address_name,
-      phoneNumber: place.phone || null,
-      placeUrl: place.place_url,
-      categoryName: place.category_name,
-      isOpen24Hours: this._detect24Hours(place.place_name),
-      source: 'kakao'
-    };
-  } catch (error) {
-    throw this._handleError(error, 'PLACE_DETAIL_FAILED');
   }
-}
 
   async searchPlacesByCategory({ lat, lng, radius, category, page = 1 }) {
   try {
