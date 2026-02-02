@@ -430,11 +430,6 @@ const options = {
                 "폴리라인/알림 확정용 토큰 (picked에 대해서만 발급, TTL 30분)",
             },
             station_id: { type: "number", nullable: true, example: 645 },
-            end_address: {
-              type: "string",
-              nullable: true,
-              example: "서울특별시 노원구 ...",
-            },
             is_supported: { type: "boolean", example: true },
             is_possible: { type: "boolean", example: true },
             is_optimal: { type: "boolean", example: true },
@@ -550,6 +545,65 @@ const options = {
             lat: { type: "number", example: 37.617357 },
             lng: { type: "number", example: 127.074854 },
             id: { type: "number", example: 645 },
+          },
+        },
+
+        RoutePolylineResponse: {
+          type: "object",
+          properties: {
+            successCode: { type: "string", example: "ROUTE-200-002" },
+            statusCode: { type: "number", example: 200 },
+            message: { type: "string", example: "폴리라인 조회 성공" },
+            result: { $ref: "#/components/schemas/RoutePolylineResult" },
+          },
+        },
+
+        RoutePolylineResult: {
+          type: "object",
+          properties: {
+            route_token: {
+              type: "string",
+              example: "rt_iNR1QytQDnuycCITER-WDg",
+            },
+            map_object: {
+              type: "string",
+              description: "ODsay loadLane 호출용 mapObject(디버그용)",
+              example: "0:0@6:2:645:647",
+            },
+            paths: {
+              type: "array",
+              items: { $ref: "#/components/schemas/RoutePolylinePath" },
+            },
+            boundary: {
+              type: "object",
+              properties: {
+                top: { type: "number", example: 37.619884 },
+                left: { type: "number", example: 127.074854 },
+                bottom: { type: "number", example: 37.617366 },
+                right: { type: "number", example: 127.091336 },
+              },
+            },
+          },
+        },
+
+        RoutePolylinePath: {
+          type: "object",
+          properties: {
+            class: {
+              type: "number",
+              description: "loadLane 기준 (1=버스, 2=지하철)",
+              enum: [1, 2],
+              example: 2,
+            },
+            type: {
+              type: "number",
+              description: "ODsay 노선 타입 코드",
+              example: 6,
+            },
+            points: {
+              type: "array",
+              items: { $ref: "#/components/schemas/RouteCandidatePoint" },
+            },
           },
         },
       },

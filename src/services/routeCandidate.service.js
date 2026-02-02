@@ -15,7 +15,10 @@ import { detectSupportForCandidate } from "./routeSupport.service.js";
 import { getSubwayLastTimeAtStation } from "./subwayLastTime.service.js";
 import { setRouteToken } from "../utils/routeTokenStore.util.js";
 import { CustomError } from "../response/customError.js";
-import { normalizeOdsayMapObject } from "../utils/odsayMapObject.util.js";
+import {
+  isLikelyValidOdsayMapObject,
+  normalizeOdsayMapObject,
+} from "../utils/odsayMapObject.util.js";
 import { getKstParts } from "../utils/kstDate.util.js";
 
 const BASE_BUFFER = 5;
@@ -693,7 +696,6 @@ export async function getRouteCandidates({ origin, destination }) {
         candidate_key: `tmp_${Date.now()}_${idx}`,
         route_token: null,
         station_id: firstTransit?.startID ?? null,
-        end_address: null,
 
         is_supported: true,
         is_possible,
@@ -738,6 +740,13 @@ export async function getRouteCandidates({ origin, destination }) {
       c.route_token = null;
       c.warnings = Array.isArray(c.warnings) ? c.warnings : [];
       c.warnings.push("MAP_OBJECT_MISSING");
+      continue;
+    }
+
+    if (!isLikelyValidOdsayMapObject(mapObj)) {
+      c.route_token = null;
+      c.warnings = Array.isArray(c.warnings) ? c.warnings : [];
+      c.warnings.push("MAP_OBJECT_INVALID");
       continue;
     }
 

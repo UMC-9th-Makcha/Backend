@@ -7,13 +7,18 @@ export class CustomError {
   }
 }
 
-
 // AUTH-401-001 Access Token 만료
 // AUTH-401-002 Refresh Token 만료
 // AUTH-403-001 권한 없음
+
 // MAP-400-001 잘못된 좌표값
 // MAP-404-001 역 정보 없음
 // MAP-404-002 경로 탐색 실패
+// MAP-410-001 경로 토큰 만료 또는 없음
+// MAP-410-002 경로 토큰 데이터 불일치(mapObject 없음)
+// MAP-422-001 경로 폴리라인 요청 불가(mapObject invalid / ODsay -8)
+// MAP-404-003 폴리라인 데이터 없음
+
 // NOTI-404-001 알림 정보 없음
 // COM-400-001 필수 파라미터 누락
 // COM-500-001 서버 내부 오류
@@ -43,4 +48,3 @@ export class CustomError {
 // SAVEREPORT-400-001 잘못된 month 파라미터z
 // RECENT-400-001 잘못된 recentId
 // RECENT-404-001 최근 목적지 정보 없음
-
