@@ -44,7 +44,6 @@ const router = Router();
  *                       - candidate_key: "tmp_1769239744553_6"
  *                         route_token: "rt_iNR1QytQDnuycCITER-WDg"
  *                         station_id: 645
- *                         end_address: "서울특별시 노원구 ..."
  *                         is_supported: true
  *                         is_possible: true
  *                         is_optimal: true
@@ -143,7 +142,9 @@ router.post("/candidates", postRouteCandidates);
  *       후보 경로 조회 시 발급된 route_token으로
  *       지도에 표시할 폴리라인 좌표를 반환합니다.
  *
- *       - route_token의 TTL은 30분이며 만료 시 410(Gone)을 반환합니다.
+ *       - route_token의 TTL은 30분이며 만료/없음이면 410(Gone)을 반환합니다. (MAP-410-001)
+ *       - 토큰은 있으나 mapObject가 없으면 410(Gone)을 반환합니다. (MAP-410-002)
+ *       - mapObject가 유효하지 않거나 ODsay가 -8(mapObject 형식 오류)을 반환하면 422를 반환합니다. (MAP-422-001)
  *       - class/type은 "노선 그래픽 API(loadLane)" 기준입니다.
  *         (candidates의 trafficType과 번호 체계가 다릅니다)
  *     parameters:
@@ -160,48 +161,7 @@ router.post("/candidates", postRouteCandidates);
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 successCode: { type: string, example: "ROUTE-200-002" }
- *                 statusCode: { type: number, example: 200 }
- *                 message: { type: string, example: "폴리라인 조회 성공" }
- *                 result:
- *                   type: object
- *                   properties:
- *                     route_token: { type: string, example: "rt_iNR1QytQDnuycCITER-WDg" }
- *                     map_object:
- *                       type: string
- *                       description: ODsay loadLane 호출용 mapObject (디버그용)
- *                       example: "0:0@6:2:645:647"
- *                     paths:
- *                       type: array
- *                       description: 노선별 polyline 정보
- *                       items:
- *                         type: object
- *                         properties:
- *                           class:
- *                             type: number
- *                             description: 노선 그래픽 API(loadLane) 기준 (1=버스노선, 2=지하철노선)
- *                             enum: [1, 2]
- *                             example: 2
- *                           type:
- *                             type: number
- *                             description: 노선 종류 코드 (ODsay 문서 하단의 버스/지하철 노선 타입 표 참조)
- *                             example: 6
- *                           points:
- *                             type: array
- *                             items:
- *                               type: object
- *                               properties:
- *                                 lat: { type: number, example: 37.617366 }
- *                                 lng: { type: number, example: 127.074854 }
- *                     boundary:
- *                       type: object
- *                       properties:
- *                         top: { type: number, example: 37.619884 }
- *                         left: { type: number, example: 127.074854 }
- *                         bottom: { type: number, example: 37.617366 }
- *                         right: { type: number, example: 127.091336 }
+ *               $ref: "#/components/schemas/RoutePolylineResponse"
  *       400:
  *         description: route_token 형식 오류
  *         content:
@@ -209,7 +169,7 @@ router.post("/candidates", postRouteCandidates);
  *             schema:
  *               type: object
  *               properties:
- *                 errorCode: { type: string, example: "COM-400-002" }
+ *                 errorCode: { type: string, example: "COM-400-001" }
  *                 statusCode: { type: number, example: 400 }
  *                 message: { type: string, example: "route_token 형식이 올바르지 않습니다." }
  *                 result: { type: object, nullable: true }
@@ -217,7 +177,7 @@ router.post("/candidates", postRouteCandidates);
  *               invalid_token:
  *                 summary: 400 예시
  *                 value:
- *                   errorCode: "COM-400-002"
+ *                   errorCode: "COM-400-001"
  *                   statusCode: 400
  *                   message: "route_token 형식이 올바르지 않습니다."
  *                   result: null
@@ -228,7 +188,7 @@ router.post("/candidates", postRouteCandidates);
  *             schema:
  *               type: object
  *               properties:
- *                 errorCode: { type: string, example: "ROUTE-404-001" }
+ *                 errorCode: { type: string, example: "MAP-404-003" }
  *                 statusCode: { type: number, example: 404 }
  *                 message: { type: string, example: "폴리라인 데이터를 찾을 수 없습니다." }
  *                 result: { type: object, nullable: true }
@@ -236,48 +196,90 @@ router.post("/candidates", postRouteCandidates);
  *               not_found:
  *                 summary: 404 예시
  *                 value:
- *                   errorCode: "ROUTE-404-001"
+ *                   errorCode: "MAP-404-003"
  *                   statusCode: 404
  *                   message: "폴리라인 데이터를 찾을 수 없습니다."
  *                   result: null
  *       410:
- *         description: route_token 만료
+ *         description: route_token 만료/무효(없음 또는 mapObject 없음)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               oneOf:
+ *                 - type: object
+ *                   properties:
+ *                     errorCode: { type: string, example: "MAP-410-001" }
+ *                     statusCode: { type: number, example: 410 }
+ *                     message: { type: string, example: "경로 토큰이 만료되었거나 존재하지 않습니다." }
+ *                     result: { type: object, nullable: true, example: null }
+ *                 - type: object
+ *                   properties:
+ *                     errorCode: { type: string, example: "MAP-410-002" }
+ *                     statusCode: { type: number, example: 410 }
+ *                     message: { type: string, example: "mapObject가 없어 폴리라인을 생성할 수 없습니다. 경로를 다시 조회해주세요." }
+ *                     result:
+ *                       type: object
+ *                       nullable: true
+ *                       example: { reason: "MAP_OBJECT_NOT_FOUND" }
+ *             examples:
+ *               token_gone:
+ *                 summary: 410(토큰 만료/없음) 예시
+ *                 value:
+ *                   errorCode: "MAP-410-001"
+ *                   statusCode: 410
+ *                   message: "경로 토큰이 만료되었거나 존재하지 않습니다."
+ *                   result: null
+ *               token_data_invalid:
+ *                 summary: 410(mapObject 없음) 예시
+ *                 value:
+ *                   errorCode: "MAP-410-002"
+ *                   statusCode: 410
+ *                   message: "mapObject가 없어 폴리라인을 생성할 수 없습니다. 경로를 다시 조회해주세요."
+ *                   result:
+ *                     reason: "MAP_OBJECT_NOT_FOUND"
+ *       422:
+ *         description: mapObject invalid(ODsay -8 포함) — 재시도 대신 candidates 재조회 필요
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 errorCode: { type: string, example: "ROUTE-410-001" }
- *                 statusCode: { type: number, example: 410 }
- *                 message: { type: string, example: "route_token이 만료되었습니다." }
- *                 result: { type: object, nullable: true }
+ *                 errorCode: { type: string, example: "MAP-422-001" }
+ *                 statusCode: { type: number, example: 422 }
+ *                 message: { type: string, example: "경로 폴리라인을 조회할 수 없습니다. 다시 경로를 조회해주세요." }
+ *                 result:
+ *                   type: object
+ *                   nullable: true
+ *                   example: { reason: "MAP_OBJECT_INVALID" }
  *             examples:
- *               gone:
- *                 summary: 410 예시
+ *               invalid_mapobject:
+ *                 summary: 422 예시
  *                 value:
- *                   errorCode: "ROUTE-410-001"
- *                   statusCode: 410
- *                   message: "route_token이 만료되었습니다."
- *                   result: null
- *       500:
- *         description: 서버 내부 오류 또는 외부 API 오류
+ *                   errorCode: "MAP-422-001"
+ *                   statusCode: 422
+ *                   message: "경로 폴리라인을 조회할 수 없습니다. 다시 경로를 조회해주세요."
+ *                   result:
+ *                     reason: "MAP_OBJECT_INVALID"
+ *       502:
+ *         description: ODsay upstream 장애
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
  *                 errorCode: { type: string, example: "COM-500-001" }
- *                 statusCode: { type: number, example: 500 }
- *                 message: { type: string, example: "서버 내부 오류가 발생했습니다." }
+ *                 statusCode: { type: number, example: 502 }
+ *                 message: { type: string, example: "ODsay loadLane upstream 오류" }
  *                 result: { type: object, nullable: true }
  *             examples:
- *               server_error:
- *                 summary: 500 예시
+ *               upstream_error:
+ *                 summary: 502 예시
  *                 value:
  *                   errorCode: "COM-500-001"
- *                   statusCode: 500
- *                   message: "서버 내부 오류가 발생했습니다."
- *                   result: null
+ *                   statusCode: 502
+ *                   message: "ODsay loadLane upstream 오류"
+ *                   result:
+ *                     status: 502
  */
 
 router.get("/polylines/:route_token", getRoutePolyline);
