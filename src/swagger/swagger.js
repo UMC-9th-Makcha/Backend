@@ -600,6 +600,11 @@ const options = {
               description: "ODsay 노선 타입 코드",
               example: 6,
             },
+            map_type: {
+              type: "string",
+              description: "버스/지하철 노선 색상 코드",
+              example: "SUBWAY_6",
+            },
             points: {
               type: "array",
               items: { $ref: "#/components/schemas/RouteCandidatePoint" },
