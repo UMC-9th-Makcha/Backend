@@ -1,9 +1,13 @@
 import express from 'express';
 import WaitingPlaceController from '../controllers/waitingPlace.controller.js';
 import WaitingPlaceService from '../services/waitingPlace.service.js';
+import KakaoMapClient from '../clients/kakaoMap.client.js';
+import { DistanceUtil } from '../utils/distance.util.js';
 
-// 컨트롤러 인스턴스 생성
-const waitingPlaceService = new WaitingPlaceService();
+// 의존성 주입
+const kakaoClient = new KakaoMapClient();
+const distanceUtil = new DistanceUtil();
+const waitingPlaceService = new WaitingPlaceService(kakaoClient, distanceUtil, null);  // timeUtil은 실제로 사용 안 함
 const waitingPlaceController = new WaitingPlaceController(waitingPlaceService);
 
 const router = express.Router();

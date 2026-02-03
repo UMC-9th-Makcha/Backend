@@ -16,6 +16,7 @@ import { globalErrorHandler } from "./middleware/error.middleware.js";
 import routeCandidateRouter from "./routes/routeCandidate.route.js";
 import facilityRouter from "./routes/facility.route.js";
 import routeRouter from "./routes/route.route.js";
+import waitingPlaceRouter from "./routes/waitingPlace.route.js";  
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use("/api/me", myinfoRouter);
 app.use("/api/facilities", facilityRouter);  
 app.use("/api/route", routeRouter);   
 app.use("/api/routes", routeCandidateRouter);
+app.use("/api/waiting-places", waitingPlaceRouter);  
 
 app.use(
   "/api-docs",
