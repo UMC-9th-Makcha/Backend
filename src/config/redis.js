@@ -14,9 +14,3 @@ redis.on('error', (err) => {
 });
 
 export default redis;
-```
-
-**3. `.env` 파일에 Redis 설정 추가:**
-```
-REDIS_HOST=localhost
-REDIS_PORT=6379
