@@ -133,6 +133,16 @@ router.patch("/settings", isLoggedIn, notiController.updateSettings);
  *     responses:
  *       200:
  *         description: 알림 통합 정보 조회 성공
+ *         content:
+ *           application/json:
+ *             example:
+ *               history:
+ *                 - id: "12"
+ *                   origin: "강남역"
+ *                   destination: "홍대입구역"
+ *                   departure_time: "2026-02-01T23:40:00.000Z"
+ *                   arrival_time: "2026-02-02T00:15:00.000Z"
+ *                   duration: 35
  */
 // 과거 알림 내역 조회
 router.get("/history", isLoggedIn, notiController.getNotificationHistoryView);
