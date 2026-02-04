@@ -21,7 +21,7 @@ export function isLikelyValidOdsayMapObject(mapObj) {
   if (/\s/.test(s)) return false;
 
   // 허용 문자 제한(숫자, ':', '@')
-  if (!/^[0-9:@]+$/.test(s)) return false;
+  // if (!/^[0-9:@]+$/.test(s)) return false;
 
   // '@' 1개
   const parts = s.split("@");
@@ -29,11 +29,11 @@ export function isLikelyValidOdsayMapObject(mapObj) {
 
   const [base, body] = parts;
 
-  // base는 "숫자:숫자"
-  if (!/^\d+:\d+$/.test(base)) return false;
+  // base는 "숫자:(숫자)+"
+  if (!/^\d+(?::\d+)+$/.test(base)) return false;
 
-  // body는 최소 ':' 포함
-  if (!body || !body.includes(":")) return false;
+  // body도 "숫자:(숫자)+"
+  if (!body || !/^\d+(?::\d+)+$/.test(body)) return false;
 
   return true;
 }
