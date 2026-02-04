@@ -50,7 +50,7 @@ export const updateMyPlaceHandler = async(req, res, next) => {
                 { field: "myPlaceId" }
             );
             e.statusCode = 400;
-            throw e;
+            return next(e);
         }
 
         // body 유효성/부분 업데이트 DTO
@@ -91,7 +91,7 @@ export const deleteMyPlaceHandler = async (req, res, next) => {
                 { field: "myPlaceId" }
             );
             e.statusCode = 400;
-            throw e;
+            return next(e);
         }
 
         await removePlace({

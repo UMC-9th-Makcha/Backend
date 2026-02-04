@@ -8,16 +8,6 @@ import { getMyInfo, updateMyPhone } from "../services/myinfo.service.js"
 export const getMyInfoHandler = async (req, res, next) => {
     try {
         const userId = req.user.userId;
-        if (!userId) {
-            const e = new CustomError(
-                "AUTH-401-001",
-                "Unauthorized",
-                req.originalUrl,
-                {}
-            );
-            e.statusCode = 401;
-            throw e;
-        }
 
         // 서비스 호출
         const userInfo = await getMyInfo(userId);
@@ -32,7 +22,7 @@ export const getMyInfoHandler = async (req, res, next) => {
             )
         )
     } catch (err) {
-        next(err);
+        return next(err);
     }
 }
 
@@ -40,17 +30,6 @@ export const getMyInfoHandler = async (req, res, next) => {
 export const updateMyPhoneHandler = async(req, res, next) => {
     try {
         const userId = req.user.userId;
-        if (!userId) {
-            const e = new CustomError(
-                "AUTH-401-001",
-                "Unauthorized",
-                req.originalUrl,
-                {}
-            );
-            e.statusCode = 401;
-            throw e;
-        }
-
         const { phone } = req.body;
 
         if (typeof(phone) !== "string" || phone.trim().length === 0) {
@@ -61,7 +40,7 @@ export const updateMyPhoneHandler = async(req, res, next) => {
                 { phone }
             );
             e.statusCode = 400;
-            throw e;
+            return next(e);
         }
 
         // 서비스 호출
@@ -77,6 +56,6 @@ export const updateMyPhoneHandler = async(req, res, next) => {
             )
         )
     } catch (err) {
-        next(err);
+        return next(err);
     }
 }

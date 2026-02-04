@@ -11,11 +11,6 @@ import { toRecentDestinationDto } from "../dtos/recentDestination.dto.js";
 export const createRecentDestinationHandler = async (req, res, next) => {
   try {
     const userId = req.user.userId;
-    if (!userId) {
-        const e = new CustomError("UNAUTHORIZED", "Unauthorized", req.originalUrl, {});
-        e.statusCode = 401;
-        throw e;
-    }
 
     const {
         placeId,
@@ -25,6 +20,18 @@ export const createRecentDestinationHandler = async (req, res, next) => {
         latitude,
         longitude,
     } = req.body;
+
+    // 필수값 검증
+    if (!placeId) {
+        const e = new CustomError(
+            "RECENT-400-001",
+            "place_id 필요",
+            req.originalUrl,
+            {}
+        );
+        e.statusCode = 400;
+        return next(e);
+    }
 
     const result = await recordRecentDestination({
         userId,
@@ -43,7 +50,7 @@ export const createRecentDestinationHandler = async (req, res, next) => {
             "최근 목적지 저장 성공",
             toRecentDestinationDto(result)));
   } catch (err) {
-    next(err);
+    return next(err);
   }
 };
 
@@ -51,13 +58,6 @@ export const getRecentDestinationsHandler = async(req, res, next) => {
     try {
         // 유저 확인
         const userId = req.user.userId;
-        if (!userId) {
-            const e = new CustomError("UNAUTHORIZED", "Unauthorized", req.originalUrl, {});
-            e.statusCode = 401;
-            throw e;
-        }
-
-        const userIdBigint = BigInt(userId);
 
         // limit 확인
         const limitRaw = req.query.limit;
@@ -66,15 +66,15 @@ export const getRecentDestinationsHandler = async(req, res, next) => {
             const n  = Number(limitRaw);
 
             if (!Number.isInteger(n) || n <= 0) {
-                const e = new CustomError("INVALID_LIMIT", "Invalid limit", req.originalUrl, {});
+                const e = new CustomError("RECENT-400-001", "Invalid limit", req.originalUrl, {});
                 e.statusCode = 400;
-                throw e;
+                return next(e);
             }
 
             limit = Math.min(n, 10);    // limit 최댓값 10
         }
 
-        const items  = await getRecentDestinations(userIdBigint, limit);
+        const items  = await getRecentDestinations(userId, limit);
 
         return res.status(200).json(
             new CustomSuccess(
@@ -85,7 +85,6 @@ export const getRecentDestinationsHandler = async(req, res, next) => {
             )
         );
     } catch (err) {
-        console.error(err);
         return next(err);
     }
 };
@@ -94,11 +93,6 @@ export const deleteRecentDestinationHandler = async (req, res, next) => {
     try {
         // 유저 확인
         const userId = req.user.userId;
-        if (!userId) {
-            const e = new CustomError("UNAUTHORIZED", "Unauthorized", req.originalUrl, {});
-            e.statusCode = 401;
-            throw e;
-        }
 
         // path param - recentId(bigint) JSON/HTTP 경계에서는 string으로 고정
         const { recentId } = req.params;
@@ -112,7 +106,7 @@ export const deleteRecentDestinationHandler = async (req, res, next) => {
                 { recentId }
             );
             e.statusCode = 400;
-            throw e;
+            return next(e);
         }
 
         // 서비스 호출
@@ -130,6 +124,6 @@ export const deleteRecentDestinationHandler = async (req, res, next) => {
             )
         );
     } catch (err) {
-        next(err);
+        return next(err);
     }
 }

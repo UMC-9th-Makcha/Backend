@@ -1,19 +1,12 @@
 // src/controllers/home.controller.js
 
 import { CustomSuccess } from '../response/customSuccess.js';
-import { CustomError } from '../response/customError.js';
 import { upsertHomeMyPlace, deleteHomeMyPlace } from '../services/home.service.js';
 
 // 홈 추가/수정(upsert)
 export const upsertHomeHandler = async(req, res, next) => {
     try {
         const userId = req.user.userId;
-        if (!userId) {
-            const e = new CustomError("UNAUTHORIZED", "Unauthorized", req.originalUrl, {});
-            e.statusCode = 401;
-            throw e;
-        }
-        //const userIdBigint = BigInt(userId);
 
         // 서비스 호출
         const home = await upsertHomeMyPlace(userId, req.body);
@@ -36,16 +29,9 @@ export const upsertHomeHandler = async(req, res, next) => {
 export const removeHomeHandler = async (req, res, next) => {
     try {
         const userId = req.user.userId;
-        if (!userId) {
-            const e = new CustomError("UNAUTHORIZED", "Unauthorized", req.originalUrl, {});
-            e.statusCode = 401;
-            throw e;
-        }
-        
-        const userIdBigint = BigInt(userId);
 
         // 서비스 호출
-        await deleteHomeMyPlace(userIdBigint);
+        await deleteHomeMyPlace(userId);
 
         // 응답
         return res.status(200).json(
