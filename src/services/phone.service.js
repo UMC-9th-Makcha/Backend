@@ -13,7 +13,7 @@ const sendVerificationCode = async (phoneNumber) => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
   
     try {
-      saveCode(phoneNumber, code);
+      await saveCode(phoneNumber, code);
     } catch (err) {
       if (err.message === 'AUTH-429-001') {
         throw new CustomError(
@@ -30,7 +30,7 @@ const sendVerificationCode = async (phoneNumber) => {
 
 // 인증번호 확인 및 전화번호 저장.
 const verifyCodeAndSavePhone = async ({ userId, phoneNumber, code }) => {
-  const isValid = verifyCode(phoneNumber, code);
+  const isValid = await verifyCode(phoneNumber, code);
 
   if (!isValid) {
     throw new CustomError(
@@ -49,7 +49,7 @@ const verifyCodeAndSavePhone = async ({ userId, phoneNumber, code }) => {
   });
 
   // 인증 완료 후 코드 제거
-  deleteCode(phoneNumber);
+  await deleteCode(phoneNumber);
 };
 
 export default {
