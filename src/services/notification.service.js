@@ -15,11 +15,21 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
         );
     }
 
-    const { snapshot } = cachedData;
-    const destination = snapshot.destination;
+    const data = cachedData.snapshot ? cachedData.snapshot : cachedData;
+    
+    const destination = data.destination;
+    const origin = data.origin; // 출발지 정보
 
     const scheduledTime = new Date(snapshot.deadlineAt);
     const currentTime = new Date();
+
+    //station_id 방어로직
+    if (!origin?.stationId) {
+        throw new CustomError(
+            "NOTI-400-002",
+            "출발역 정보가 누락되었습니다. ",
+            "api/alerts")
+    }
 
     // 유저가 마이페이지에서 알림 수정을 하지 않는다면 기본 값으로 DB 저장
     await notiRepo.ensureUserSetting(userId);

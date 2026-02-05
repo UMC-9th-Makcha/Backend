@@ -1,7 +1,16 @@
 import { prisma } from '../config/prisma.js';  //경로 수정 작업을 진행함.
+import { CustomError } from "../response/customError.js"; //
 
 // 알림 생성
 export const addNotification = async (data) => {
+    
+    if (!data.user_id || !data.station_id) {
+        throw new CustomError(
+            "COM-400-001",
+            `필수 데이터 누락: user_id(${data.user_id}), station_id(${data.station_id})`,
+            "api/alerts"
+        )
+    }
     try {
         const notification = await prisma.notificationTrigger.create({
             data: {
