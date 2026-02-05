@@ -3,6 +3,8 @@ import { CustomSuccess } from '../response/customSuccess.js';
 import { CustomError } from '../response/customError.js'; //공통 응답 구조 사용함.
 
 const isProd = process.env.NODE_ENV === 'production'; //http 상태(웹 미배포)에서도 쿠키를 브라우저에서 받을 수 있도록 함.
+// 30일
+const REFRESH_COOKIE_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
 
 //POST /auth/kakao 카카오 로그인 컨트롤러
 const kakaoLogin = async (req, res, next) => {
@@ -27,6 +29,7 @@ const kakaoLogin = async (req, res, next) => {
         secure: isProd, 
         // secure: true,
         sameSite: isProd ? 'none' : 'lax', 
+        maxAge: REFRESH_COOKIE_MAX_AGE, //기간 연장
         // sameSite: 'none',
       });
   
@@ -63,6 +66,7 @@ const kakaoLogin = async (req, res, next) => {
         secure: isProd,
         // secure: true,
         sameSite: isProd ? 'none' : 'lax', 
+        maxAge: REFRESH_COOKIE_MAX_AGE,
         //sameSite: 'none',
       });
   

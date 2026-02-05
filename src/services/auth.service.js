@@ -63,7 +63,7 @@ const kakaoLogin = async (code, redirectUri ) => { // redirectUri 파라미터 �
 
     // Refresh Token
     const refreshToken = jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '14d',
+      expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
     });
 
     // Refresh Token DB 저장 
@@ -131,7 +131,7 @@ const refresh = async (refreshToken) => {
     const newRefreshToken = jwt.sign(
       newPayload,
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '14d' }
+      { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' }
     );
 
     // RT 교체 
