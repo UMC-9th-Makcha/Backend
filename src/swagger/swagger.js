@@ -588,25 +588,37 @@ const options = {
 
         RoutePolylinePath: {
           type: "object",
+          description: "지도에 그릴 경로 구간(polyline)",
           properties: {
             class: {
               type: "number",
-              description: "loadLane 기준 (1=버스, 2=지하철)",
-              enum: [1, 2],
+              description: "ODsay loadLane 기준 (1=버스, 2=지하철) WALK는 0",
               example: 2,
             },
             type: {
               type: "number",
-              description: "ODsay 노선 타입 코드",
+              description: "ODsay 노선 타입 코드 WALK는 0",
               example: 6,
             },
             map_type: {
               type: "string",
-              description: "버스/지하철 노선 색상 코드",
+              description: "구간 타입 (프론트 스타일링 기준)",
               example: "SUBWAY_6",
+            },
+            order: {
+              type: "number",
+              nullable: true,
+              description: `
+(선택) 경로 순서 힌트.
+- candidates detail.steps index 기반
+- WALK 구간에 한해 제공될 수 있음
+- paths 배열의 순서를 보장하지는 않음
+      `.trim(),
+              example: 0,
             },
             points: {
               type: "array",
+              description: "polyline 좌표 배열",
               items: { $ref: "#/components/schemas/RouteCandidatePoint" },
             },
           },

@@ -39,6 +39,39 @@ function generateRouteToken() {
   return "rt_" + crypto.randomBytes(16).toString("base64url"); // 128-bit
 }
 
+function extractWalkSegments(detail) {
+  const steps = detail?.steps;
+  if (!Array.isArray(steps)) return [];
+
+  const segs = [];
+
+  steps.forEach((step, idx) => {
+    if (step?.type !== "WALK") return;
+
+    const pts = Array.isArray(step?.points) ? step.points : [];
+    const a = pts[0];
+    const b = pts[pts.length - 1];
+
+    const fromLat = Number(a?.lat);
+    const fromLng = Number(a?.lng);
+    const toLat = Number(b?.lat);
+    const toLng = Number(b?.lng);
+
+    if (![fromLat, fromLng, toLat, toLng].every(Number.isFinite)) return;
+
+    // 0거리/동일점 WALK는 스킵
+    if (fromLat === toLat && fromLng === toLng) return;
+
+    segs.push({
+      order: idx,
+      from: { lat: fromLat, lng: fromLng },
+      to: { lat: toLat, lng: toLng },
+    });
+  });
+
+  return segs;
+}
+
 // 환승 횟수 계산 (도보 제외 지하철/버스 구간 개수 -1)
 function calcTransferCount(subPath) {
   const arr = Array.isArray(subPath) ? subPath : [];
@@ -690,7 +723,11 @@ export async function getRouteCandidates({ origin, destination }) {
         subPath,
       });
       // ---------- route_token, 캐시 ----------
-      const mapObj = info?.mapObj ?? null;
+      const mapObj =
+        (typeof info?.mapObj === "string" && info.mapObj.trim()) ||
+        (typeof p?.info?.mapObj === "string" && p.info.mapObj.trim()) ||
+        (typeof p?.mapObj === "string" && p.mapObj.trim()) ||
+        null;
 
       return {
         candidate_key: `tmp_${Date.now()}_${idx}`,
@@ -726,38 +763,46 @@ export async function getRouteCandidates({ origin, destination }) {
   // 최종 3개 선택
   const picked = selectTopCandidates({ candidates: supportedCandidates });
 
-  console.log("[candidates] picked=", picked.length);
+  const pickedKeys = new Set(picked.map((c) => c.candidate_key));
+  const pool = [
+    ...picked,
+    ...supportedCandidates.filter((c) => c && !pickedKeys.has(c.candidate_key)),
+  ];
+  const finalPicked = [];
 
-  // 최적 1개 표시
-  markOptimalCandidate(picked);
+  // 2) token 발급 가능한 후보만 채택 (최대 3개)
+  for (const c of pool) {
+    if (!c) continue;
+    if (finalPicked.length >= PICK_MAX) break;
 
-  // picked 3개에 대해서만 route_token 발급 + 캐시 저장 (TTL 기본 30분)
-  for (const c of picked) {
     const raw = c?.meta?.map_obj ?? null;
     const mapObj = normalizeOdsayMapObject(raw);
 
     if (!mapObj) {
-      c.route_token = null;
-      c.warnings = Array.isArray(c.warnings) ? c.warnings : [];
-      c.warnings.push("MAP_OBJECT_MISSING");
+      console.warn("[route_token][skip] MAP_OBJECT_MISSING", {
+        candidate_key: c?.candidate_key,
+        raw,
+      });
       continue;
     }
 
     if (!isLikelyValidOdsayMapObject(mapObj)) {
-      c.route_token = null;
-      c.warnings = Array.isArray(c.warnings) ? c.warnings : [];
-      c.warnings.push("MAP_OBJECT_INVALID");
+      console.warn("[route_token][skip] MAP_OBJECT_INVALID", {
+        candidate_key: c?.candidate_key,
+        mapObj,
+      });
       continue;
     }
 
     const route_token = generateRouteToken();
+    const walkSegments = extractWalkSegments(c.detail);
 
     setRouteToken(
       route_token,
       {
-        mapObj, // polyline 생성용(loadLane)
+        mapObj,
+        walkSegments,
         snapshot: {
-          // 알림 저장용
           origin,
           destination,
           tags: c.tags,
@@ -767,10 +812,13 @@ export async function getRouteCandidates({ origin, destination }) {
         },
       },
       30 * 60,
-    ); // 30분 TTL
+    );
 
     c.route_token = route_token;
+    finalPicked.push(c);
   }
+  // 최적 1개 표시
+  markOptimalCandidate(finalPicked);
 
   // meta 제거
   return picked.map(({ meta, ...rest }) => rest);
