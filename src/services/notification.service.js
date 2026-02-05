@@ -7,7 +7,7 @@ import { recordRecentDestination } from "./recentDestination.service.js"; // 경
 export const registerNotification = async (userId, cacheKey, alert_time) => {
     const cachedData = getRouteToken(cacheKey);
     
-    // 1. 캐시 데이터 존재 여부 확인
+    // 캐시 데이터 존재 여부 확인
     if (!cachedData) {
         throw new CustomError(
             "NOTI-404-001",
@@ -16,11 +16,9 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
         );
     }
 
-    // 2. 데이터 구조 정규화 (snapshot이 안에 있든, 바로 있든 대응)
-    // cachedData 자체가 데이터면 snapshot은 cachedData가 됩니다.
-    const snapshot = cachedData.snapshot ? cachedData.snapshot : cachedData;
+    const { snapshot } = cachedData;
 
-    // 3. 필수 하위 데이터 존재 확인 (여기서 undefined 방지)
+    // 필수 하위 데이터 존재 확인
     if (!snapshot.origin || !snapshot.destination) {
         console.error("❌ 캐시 데이터 구조가 올바르지 않습니다:", snapshot);
         throw new CustomError(
@@ -31,8 +29,13 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
     }
 
     const destination = snapshot.destination;
-    const origin = snapshot.origin;
-    const scheduledTime = new Date(snapshot.deadlineAt);
+    const stationIdFromCache = snapshot.station_id
+
+    if (!stationIdFromCache) {
+        throw new CustomError("COM-400-001", "출발역 정보가 누락되었습니다.", "api/alerts");
+    }
+
+    const scheduledTime = new Date(snapshot.card?.deadline_at);
     const currentTime = new Date();
 
     // 4. 유저 설정 보장
@@ -49,7 +52,7 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
     // 여기서 snapshot.origin.stationId가 확실히 있는지 체크 후 전달
     const result = await notiRepo.addNotification({
         user_id: userId,
-        station_id: origin.stationId || origin.id, // stationId 혹은 id 필드 사용
+        station_id: stationIdFromCache,
         route_id: snapshot.routeId || null, 
         title: destination.name,
         latitude: destination.lat,
