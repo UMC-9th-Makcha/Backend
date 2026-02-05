@@ -45,6 +45,7 @@ class FacilityService {
       }
 
       // 거리 계산 및 정렬
+      // 수정: thumbnailUrl과 operatingHours 추가
       const facilitiesWithDistance = facilities.map(facility => ({
         ...facility,
         distance: this.distanceUtil.calculate(
@@ -52,19 +53,25 @@ class FacilityService {
           longitude,
           facility.lat,
           facility.lng
-        )
+        ),
+        thumbnailUrl: facility.placeUrl || null, 
+        operatingHours: this._formatOperatingHours(facility)  
       }));
 
       const sortedFacilities = facilitiesWithDistance.sort((a, b) => a.distance - b.distance);
 
-      // 시설이 없는 경우
+      // 시설이 없는 경우 - 에러 대신 빈 배열 반환
       if (sortedFacilities.length === 0) {
-        throw new CustomError(
-          'FAC-404-001',
-          '주변에 시설이 없습니다',
-          '/facilities/search',
-          { searchArea: { latitude, longitude, radius } }
-        );
+        return {
+          facilities: [],
+          totalCount: 0,
+          searchParams: {
+            latitude,
+            longitude,
+            radius: radius || appConfig.search.defaultRadius,
+            keyword: keyword || null
+          }
+        };
       }
 
       return {
@@ -126,6 +133,7 @@ class FacilityService {
       const facilities = result.places;
 
       // 거리 계산 및 정렬
+      // 수정: thumbnailUrl과 operatingHours 추가
       const facilitiesWithDistance = facilities.map(facility => ({
         ...facility,
         distance: this.distanceUtil.calculate(
@@ -133,19 +141,25 @@ class FacilityService {
           longitude,
           facility.lat,
           facility.lng
-        )
+        ),
+        thumbnailUrl: facility.placeUrl || null,  
+        operatingHours: this._formatOperatingHours(facility) 
       }));
 
       const sortedFacilities = facilitiesWithDistance.sort((a, b) => a.distance - b.distance);
 
-      // 시설이 없는 경우
+      // 시설이 없는 경우 - 에러 대신 빈 배열 반환 
       if (sortedFacilities.length === 0) {
-        throw new CustomError(
-          'FAC-404-001',
-          `${categoryType} 카테고리의 시설이 없습니다`,
-          `/facilities/category/${categoryType}`,
-          { searchArea: { latitude, longitude, radius, categoryType } }
-        );
+        return {
+          category: categoryType,
+          facilities: [],
+          totalCount: 0,
+          searchParams: {
+            latitude,
+            longitude,
+            radius: radius || appConfig.search.defaultRadius
+          }
+        };
       }
 
       return {
@@ -188,6 +202,30 @@ class FacilityService {
         { originalError: error.message }
       );
     }
+  }
+
+  /**
+   * 운영시간 포맷팅 헬퍼 메서드
+   * 🆕 새로 추가된 메서드
+   */
+  _formatOperatingHours(facility) {
+    // 24시간 영업소인 경우
+    if (facility.isOpen24Hours) {
+      return '24시간 영업';
+    }
+    
+    // 카테고리별 일반적인 영업시간 (추정치)
+    const defaultHours = {
+      'CAFE': '평일 08:00-22:00',
+      'PC_ROOM': '24시간 영업',
+      'SAUNA': '06:00-22:00',
+      'RESTAURANT': '평일 11:00-22:00',
+      'PARK': '상시 개방',
+      'LIBRARY': '평일 09:00-18:00',
+      'SHOPPING_MALL': '평일 10:00-22:00'
+    };
+    
+    return defaultHours[facility.category] || '영업시간 정보 없음';
   }
 }
 

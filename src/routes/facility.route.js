@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import FacilityController from '../controllers/facility.controller.js';
 import FacilityService from '../services/facility.service.js';
-import KakaoMapClient from '../clients/kakaoMap.client.js';   // 정확한 파일명으로 수정
+import KakaoMapClient from '../clients/kakaoMap.client.js';
 import { DistanceUtil } from '../utils/distance.util.js';
 
 const router = Router();
@@ -56,6 +56,88 @@ const facilityController = new FacilityController(facilityService);
  *     responses:
  *       200:
  *         description: 주변 시설 검색 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: string
+ *                   example: "FAC-200-001"
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 message:
+ *                   type: string
+ *                   example: "주변 시설 검색 성공"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     facilities:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             example: "12345"
+ *                           name:
+ *                             type: string
+ *                             example: "스타벅스 강남점"
+ *                           category:
+ *                             type: string
+ *                             example: "CAFE"
+ *                           lat:
+ *                             type: number
+ *                             example: 37.5012
+ *                           lng:
+ *                             type: number
+ *                             example: 127.0396
+ *                           address:
+ *                             type: string
+ *                             example: "서울시 강남구 테헤란로 123"
+ *                           roadAddress:
+ *                             type: string
+ *                             example: "서울시 강남구 테헤란로 123"
+ *                           phoneNumber:
+ *                             type: string
+ *                             nullable: true
+ *                             example: "02-1234-5678"
+ *                           distance:
+ *                             type: number
+ *                             description: 현재 위치로부터의 거리 (미터)
+ *                             example: 250
+ *                           thumbnailUrl:
+ *                             type: string
+ *                             nullable: true
+ *                             description: 장소 카카오맵 링크 (썸네일 대용)
+ *                             example: "http://place.map.kakao.com/12345"
+ *                           operatingHours:
+ *                             type: string
+ *                             description: 운영 시간 정보
+ *                             example: "평일 08:00-22:00"
+ *                           isOpen24Hours:
+ *                             type: boolean
+ *                             example: false
+ *                     totalCount:
+ *                       type: integer
+ *                       example: 15
+ *                     searchParams:
+ *                       type: object
+ *                       properties:
+ *                         latitude:
+ *                           type: number
+ *                           example: 37.5665
+ *                         longitude:
+ *                           type: number
+ *                           example: 126.9780
+ *                         radius:
+ *                           type: integer
+ *                           example: 1000
+ *                         keyword:
+ *                           type: string
+ *                           nullable: true
+ *                           example: "카페"
  *       400:
  *         description: 필수 파라미터 누락 또는 잘못된 요청
  *       500:
@@ -105,6 +187,87 @@ router.get('/search', (req, res, next) => facilityController.searchFacilities(re
  *     responses:
  *       200:
  *         description: 카테고리별 시설 검색 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: string
+ *                   example: "FAC-200-002"
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 message:
+ *                   type: string
+ *                   example: "카테고리별 시설 검색 성공"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     category:
+ *                       type: string
+ *                       example: "CAFE"
+ *                     facilities:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             example: "12345"
+ *                           name:
+ *                             type: string
+ *                             example: "스타벅스 강남점"
+ *                           category:
+ *                             type: string
+ *                             example: "CAFE"
+ *                           lat:
+ *                             type: number
+ *                             example: 37.5012
+ *                           lng:
+ *                             type: number
+ *                             example: 127.0396
+ *                           address:
+ *                             type: string
+ *                             example: "서울시 강남구 테헤란로 123"
+ *                           roadAddress:
+ *                             type: string
+ *                             example: "서울시 강남구 테헤란로 123"
+ *                           phoneNumber:
+ *                             type: string
+ *                             nullable: true
+ *                             example: "02-1234-5678"
+ *                           distance:
+ *                             type: number
+ *                             description: 현재 위치로부터의 거리 (미터)
+ *                             example: 250
+ *                           thumbnailUrl:
+ *                             type: string
+ *                             nullable: true
+ *                             description: 장소 카카오맵 링크 (썸네일 대용)
+ *                             example: "http://place.map.kakao.com/12345"
+ *                           operatingHours:
+ *                             type: string
+ *                             description: 운영 시간 정보
+ *                             example: "평일 08:00-22:00"
+ *                           isOpen24Hours:
+ *                             type: boolean
+ *                             example: false
+ *                     totalCount:
+ *                       type: integer
+ *                       example: 8
+ *                     searchParams:
+ *                       type: object
+ *                       properties:
+ *                         latitude:
+ *                           type: number
+ *                           example: 37.5665
+ *                         longitude:
+ *                           type: number
+ *                           example: 126.9780
+ *                         radius:
+ *                           type: integer
+ *                           example: 1000
  *       400:
  *         description: 필수 파라미터 누락
  *       404:
