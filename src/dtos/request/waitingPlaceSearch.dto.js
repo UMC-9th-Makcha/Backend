@@ -10,24 +10,27 @@ export class WaitingPlaceSearchDto {
   validate() {
     const errors = [];
 
-    if (!this.lat || isNaN(this.lat) || this.lat < -90 || this.lat > 90) {
+    // 수정: lat === undefined || lat === null 체크로 변경
+    if (this.lat === undefined || this.lat === null || isNaN(this.lat) || this.lat < -90 || this.lat > 90) {
       errors.push({ 
         field: 'lat', 
         message: '위도는 -90에서 90 사이여야 합니다.' 
       });
     }
 
-    if (!this.lng || isNaN(this.lng) || this.lng < -180 || this.lng > 180) {
+    // 수정: lng === undefined || lng === null 체크로 변경
+    if (this.lng === undefined || this.lng === null || isNaN(this.lng) || this.lng < -180 || this.lng > 180) {
       errors.push({ 
         field: 'lng', 
         message: '경도는 -180에서 180 사이여야 합니다.' 
       });
     }
 
-    if (this.category && !['CAFE', 'PC_ROOM', 'SAUNA'].includes(this.category)) {
+    // ⭐ RESTAURANT 추가
+    if (this.category && !['CAFE', 'PC_ROOM', 'SAUNA', 'RESTAURANT'].includes(this.category)) {
       errors.push({ 
         field: 'category', 
-        message: '유효하지 않은 카테고리입니다. (CAFE, PC_ROOM, SAUNA)' 
+        message: '유효하지 않은 카테고리입니다. (CAFE, PC_ROOM, SAUNA, RESTAURANT)' 
       });
     }
 

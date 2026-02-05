@@ -16,7 +16,7 @@ class WaitingPlaceService {
         throw new CustomError(
           'COM-400-001',
           '필수 파라미터 누락',
-          '/api/v1/waiting-places/deeplink',
+          '/api/waiting-places/deeplink',
           { required: ['fromLat', 'fromLng', 'toLat', 'toLng'] }
         );
       }
@@ -27,7 +27,7 @@ class WaitingPlaceService {
         throw new CustomError(
           'MAP-400-001',
           '잘못된 좌표값',
-          '/api/v1/waiting-places/deeplink',
+          '/api/waiting-places/deeplink',
           { 
             from: { lat: deepLinkDto.fromLat, lng: deepLinkDto.fromLng },
             to: { lat: deepLinkDto.toLat, lng: deepLinkDto.toLng }
@@ -60,7 +60,7 @@ class WaitingPlaceService {
       throw new CustomError(
         'COM-500-001',
         '서버 내부 오류',
-        '/api/v1/waiting-places/deeplink',
+        '/api/waiting-places/deeplink',
         { originalError: error.message }
       );
     }
@@ -71,21 +71,21 @@ class WaitingPlaceService {
     const { lat, lng, category, openOnly, limit } = searchDto;
 
     // 필수 파라미터 검증
-    if (!lat || !lng) {
-      throw new CustomError(
-        'COM-400-001',
-        '필수 파라미터 누락',
-        '/api/v1/waiting-places',
-        { required: ['lat', 'lng'] }
-      );
-    }
+if (lat === undefined || lat === null || lng === undefined || lng === null) {
+  throw new CustomError(
+    'COM-400-001',
+    '필수 파라미터 누락',
+    '/api/waiting-places',  
+    { required: ['lat', 'lng'] }
+  );
+}
 
     // 좌표 유효성 검증
     if (!this._isValidCoordinate(lat, lng)) {
       throw new CustomError(
         'MAP-400-001',
         '잘못된 좌표값',
-        '/api/v1/waiting-places',
+        '/api/waiting-places',
         { lat, lng }
       );
     }
@@ -144,25 +144,32 @@ class WaitingPlaceService {
         ? placesWithDistance.filter(p => this._isCurrentlyOpen(p, currentTime))
         : placesWithDistance;
 
-      const sortedPlaces = filteredPlaces
-        .sort((a, b) => a.distance - b.distance)
-        .slice(0, limit);
+        
+      const MAX_DISTANCE = 5000; //반경 5km
 
-      // 장소가 없는 경우
+const sortedPlaces = filteredPlaces
+  .filter(p => p.distance <= MAX_DISTANCE)  // 거리 필터 추가
+  .sort((a, b) => a.distance - b.distance)
+  .slice(0, limit)
+
+      // 장소가 없는 경우 - 에러 대신 빈 배열 반환
       if (sortedPlaces.length === 0) {
-        throw new CustomError(
-          'MAP-404-001',
-          '주변에 대기 장소가 없습니다',
-          '/api/v1/waiting-places',
-          { searchArea: { lat, lng, radius: appConfig.search.defaultRadius } }
-        );
+        return {
+          places: [],
+          totalCount: 0
+        };
       }
 
       const enrichedPlaces = sortedPlaces.map(place => {
         const recommendReason = this._generateRecommendReason(place, currentTime);
         
         return new WaitingPlaceResponseDto(
-          { ...place, recommendReason },
+          { 
+            ...place, 
+            recommendReason,
+            thumbnailUrl: place.placeUrl || null,  
+            operatingHours: this._formatOperatingHours(place) 
+          },
           place.distance,
           currentTime
         );
@@ -187,7 +194,7 @@ class WaitingPlaceService {
         throw new CustomError(
           'MAP-500-001',
           '카카오 API 오류',
-          '/api/v1/waiting-places',
+          '/api/waiting-places',
           { 
             apiError: error.response.data?.message || error.message,
             statusCode: error.response.status 
@@ -199,7 +206,7 @@ class WaitingPlaceService {
       throw new CustomError(
         'COM-500-001',
         '서버 내부 오류',
-        '/api/v1/waiting-places',
+        '/api/waiting-places',
         { originalError: error.message }
       );
     }
@@ -211,7 +218,7 @@ class WaitingPlaceService {
       throw new CustomError(
         'COM-400-001',
         '장소 ID가 필요합니다',
-        `/api/v1/waiting-places/${placeId}`
+        `/api/waiting-places/${placeId}`
       );
     }
 
@@ -222,7 +229,7 @@ class WaitingPlaceService {
         throw new CustomError(
           'MAP-404-001',
           '대기 장소를 찾을 수 없습니다',
-          `/api/v1/waiting-places/${placeId}`,
+          `/api/waiting-places/${placeId}`,
           { placeId }
         );
       }
@@ -231,10 +238,15 @@ class WaitingPlaceService {
       const recommendReason = this._generateRecommendReason(place, currentTime);
       const kakaoMapUrl = this._generateKakaoMapDeepLink(place);
 
-      // 성공 시 데이터만 반환
+      // 성공 시 데이터만 반환 
       return {
         ...new WaitingPlaceResponseDto(
-          { ...place, recommendReason },
+          { 
+            ...place, 
+            recommendReason,
+            thumbnailUrl: place.placeUrl || null,       
+            operatingHours: this._formatOperatingHours(place)  
+          },
           0,
           currentTime
         ),
@@ -259,7 +271,7 @@ class WaitingPlaceService {
         throw new CustomError(
           'MAP-500-001',
           '카카오 API 오류',
-          `/api/v1/waiting-places/${placeId}`,
+          `/api/waiting-places/${placeId}`,
           { apiError: error.message }
         );
       }
@@ -268,7 +280,7 @@ class WaitingPlaceService {
       throw new CustomError(
         'COM-500-001',
         '서버 내부 오류',
-        `/api/v1/waiting-places/${placeId}`,
+        `/api/waiting-places/${placeId}`,
         { originalError: error.message }
       );
     }
@@ -282,7 +294,7 @@ class WaitingPlaceService {
       throw new CustomError(
         'COM-400-001',
         '필수 파라미터 누락',
-        `/api/v1/waiting-places/${placeId}/directions`,
+        `/api/waiting-places/${placeId}/directions`,
         { required: ['placeId', 'fromLat', 'fromLng'] }
       );
     }
@@ -292,7 +304,7 @@ class WaitingPlaceService {
       throw new CustomError(
         'MAP-400-001',
         '잘못된 좌표값',
-        `/api/v1/waiting-places/${placeId}/directions`,
+        `/api/waiting-places/${placeId}/directions`,
         { lat: fromLat, lng: fromLng }
       );
     }
@@ -304,7 +316,7 @@ class WaitingPlaceService {
         throw new CustomError(
           'MAP-404-001',
           '대기 장소를 찾을 수 없습니다',
-          `/api/v1/waiting-places/${placeId}/directions`,
+          `/api/waiting-places/${placeId}/directions`,
           { placeId }
         );
       }
@@ -353,7 +365,7 @@ class WaitingPlaceService {
         throw new CustomError(
           'MAP-404-002',
           '경로 탐색 실패',
-          `/api/v1/waiting-places/${placeId}/directions`,
+          `/api/waiting-places/${placeId}/directions`,
           { apiError: error.message }
         );
       }
@@ -362,7 +374,7 @@ class WaitingPlaceService {
       throw new CustomError(
         'COM-500-001',
         '서버 내부 오류',
-        `/api/v1/waiting-places/${placeId}/directions`,
+        `/api/waiting-places/${placeId}/directions`,
         { originalError: error.message }
       );
     }
@@ -422,6 +434,22 @@ class WaitingPlaceService {
       return true;
     }
     return true;
+  }
+  
+  _formatOperatingHours(place) {
+    // 24시간 영업소인 경우
+    if (place.isOpen24Hours) {
+      return '24시간 영업';
+    }
+    
+    // 카테고리별 일반적인 영업시간 (추정치)
+    const defaultHours = {
+      'CAFE': '평일 08:00-22:00',
+      'PC_ROOM': '24시간 영업',
+      'SAUNA': '06:00-22:00'
+    };
+    
+    return defaultHours[place.category] || '영업시간 정보 없음';
   }
 }
 

@@ -21,7 +21,7 @@ const router = express.Router();
 
 /**
  * @swagger
- * /api/v1/waiting-places:
+ * /api/waiting-places:
  *   get:
  *     summary: 첫 차 대기 장소 조회
  *     description: |
@@ -99,10 +99,19 @@ const router = express.Router();
  *                         type: number
  *                         example: 127.0396
  *                       distance:
- *                         type: number
- *                         description: 현재 위치로부터의 거리 (미터)
- *                         example: 250
- *       400:
+*                         type: number
+*                         description: 현재 위치로부터의 거리 (미터)
+*                         example: 250
+*                       thumbnailUrl:
+*                         type: string
+*                         nullable: true
+*                         description: 장소 카카오맵 링크 (썸네일 대용)
+*                         example: "http://place.map.kakao.com/12345"
+*                       operatingHours:
+*                         type: string
+*                         description: 운영 시간 정보
+*                         example: "24시간 영업"
+*       400:
  *         description: 잘못된 요청
  *         content:
  *           application/json:
@@ -125,7 +134,7 @@ router.get('/', (req, res, next) =>
 
 /**
  * @swagger
- * /api/v1/waiting-places/{placeId}/directions:
+ * /api/waiting-places/{placeId}/directions:
  *   get:
  *     summary: 대기 장소 길찾기
  *     description: |
@@ -209,7 +218,7 @@ router.get('/:placeId/directions', (req, res, next) =>
 
 /**
  * @swagger
- * /api/v1/waiting-places/{placeId}/deeplink:
+ * /api/waiting-places/{placeId}/deeplink:
  *   get:
  *     summary: 카카오맵 딥링크 생성
  *     description: |
@@ -300,7 +309,7 @@ router.get('/:placeId/deeplink', (req, res, next) =>
 
 /**
  * @swagger
- * /api/v1/waiting-places/{placeId}:
+ * /api/waiting-places/{placeId}:
  *   get:
  *     summary: 장소 상세 정보 조회
  *     description: |

@@ -11,7 +11,7 @@ class WaitingPlaceController {
 
   /*
    - 첫 차 대기 장소 조회
-   - GET /api/v1/waiting-places
+   - GET /api/waiting-places
    */
   async getWaitingPlaces(req, res, next) {
     try {
@@ -46,7 +46,7 @@ class WaitingPlaceController {
 
   /*
    - 대기 장소 길찾기
-   - GET /api/v1/waiting-places/:placeId/directions
+   - GET /api/waiting-places/:placeId/directions
    */
   async getDirections(req, res, next) {
     try {
@@ -85,7 +85,7 @@ class WaitingPlaceController {
 
   /*
    - 대기 장소 상세 조회
-   - GET /api/v1/waiting-places/:placeId
+   - GET /api/waiting-places/:placeId
    */
   async getPlaceDetail(req, res, next) {
     try {
@@ -118,7 +118,7 @@ class WaitingPlaceController {
 
   /*
    - 카카오맵 딥링크 생성
-   - GET /api/v1/waiting-places/:placeId/deeplink
+   - GET /api/waiting-places/:placeId/deeplink
    */
   async getDeepLink(req, res, next) {
     try {
