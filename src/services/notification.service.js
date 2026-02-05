@@ -7,7 +7,8 @@ import { recordRecentDestination } from "./recentDestination.service.js"; // 경
 export const registerNotification = async (userId, cacheKey, alert_time) => {
     const cachedData = getRouteToken(cacheKey);
     
-    if(!cachedData) {
+    // 1. 캐시 데이터 존재 여부 확인
+    if (!cachedData) {
         throw new CustomError(
             "NOTI-404-001",
             "만료 되었거나 유효하지 않은 경로 정보입니다. 다시 조회하세요.",
@@ -15,38 +16,41 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
         );
     }
 
-    const data = cachedData.snapshot ? cachedData.snapshot : cachedData;
-    
-    const destination = data.destination;
-    const origin = data.origin; // 출발지 정보
+    // 2. 데이터 구조 정규화 (snapshot이 안에 있든, 바로 있든 대응)
+    // cachedData 자체가 데이터면 snapshot은 cachedData가 됩니다.
+    const snapshot = cachedData.snapshot ? cachedData.snapshot : cachedData;
 
+    // 3. 필수 하위 데이터 존재 확인 (여기서 undefined 방지)
+    if (!snapshot.origin || !snapshot.destination) {
+        console.error("❌ 캐시 데이터 구조가 올바르지 않습니다:", snapshot);
+        throw new CustomError(
+            "NOTI-400-001",
+            "경로 상세 정보(출발지/목적지)가 누락되었습니다.",
+            "api/alerts"
+        );
+    }
+
+    const destination = snapshot.destination;
+    const origin = snapshot.origin;
     const scheduledTime = new Date(snapshot.deadlineAt);
     const currentTime = new Date();
 
-    //station_id 방어로직
-    if (!origin?.stationId) {
-        throw new CustomError(
-            "NOTI-400-002",
-            "출발역 정보가 누락되었습니다. ",
-            "api/alerts")
-    }
-
-    // 유저가 마이페이지에서 알림 수정을 하지 않는다면 기본 값으로 DB 저장
+    // 4. 유저 설정 보장
     await notiRepo.ensureUserSetting(userId);
 
-    // 막차까지 남은 시간 계산하기
+    // 5. 막차 시간 계산 및 초기 트리거 결정
     const diffMin = Math.floor((scheduledTime - currentTime) / 60000);
-
-    // 남은 시간 기준으로 DB에 들어갈 상태값 결정
     let initTrigger = 'SENT_THIRTY';
     if (diffMin <= 3) initTrigger = 'SENT_NOW';
     else if (diffMin <= 10) initTrigger = 'SENT_THREE';
     else if (diffMin <= 30 ) initTrigger = 'SENT_TEN';
 
-    // 5. 알림 테이블에 저장
+    // 6. DB 저장 (notiRepo.addNotification)
+    // 여기서 snapshot.origin.stationId가 확실히 있는지 체크 후 전달
     const result = await notiRepo.addNotification({
         user_id: userId,
-        station_id: snapshot.origin.stationId,
+        station_id: origin.stationId || origin.id, // stationId 혹은 id 필드 사용
+        route_id: snapshot.routeId || null, 
         title: destination.name,
         latitude: destination.lat,
         longitude: destination.lng,
@@ -56,6 +60,7 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
         alert_time: alert_time 
     });
 
+    // 7. 최근 목적지 기록
     await recordRecentDestination({
         userId,
         placeId: destination.placeId,
@@ -65,13 +70,12 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
         longitude: destination.lng
     });
 
-    // 사용한 캐시는 삭제하여 메모리 관리
+    // 8. 캐시 삭제 및 SMS 발송
     deleteRouteToken(cacheKey);
 
-    //result에 담긴 유저 정보 통해 번호를 가져옴
     const userPhoneNumber = result.user?.phone_number;
     if (userPhoneNumber) {
-        await sendSMS(userPhoneNumber, `막차 알림 예약이 완료되었습니다.`)
+        await sendSMS(userPhoneNumber, `막차 알림 예약이 완료되었습니다.`);
     }
 
     return result;
