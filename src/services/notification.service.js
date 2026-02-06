@@ -32,6 +32,9 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
 
     const destination = snapshot.destination;
     const stationIdFromCache = snapshot.station_id
+    const stationName = snapshot.origin.name;
+    const lat = snapshot.origin.lat; // 위도
+    const lng = snapshot.origin.lng; // 경도
 
     if (!stationIdFromCache) {
         throw new CustomError("COM-400-001", "출발역 정보가 누락되었습니다.", "api/alerts");
@@ -59,6 +62,8 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
             "api/alerts"
         )
     }
+
+    await notiRepo.upsertStation(stationIdFromCache, stationName, lat, lng);
 
     // 6. DB 저장 (notiRepo.addNotification)
     // 여기서 snapshot.origin.stationId가 확실히 있는지 체크 후 전달
