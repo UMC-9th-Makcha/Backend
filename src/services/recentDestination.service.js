@@ -50,7 +50,7 @@ export const deleteRecentDestination = async ({ userId, recentId }) => {
         const e = new CustomError(
         "RECENT-404-001",
         "recent destinations not found",
-        "/api/recent-destinations"
+        null
         );
         e.statusCode = 404;
         throw e;

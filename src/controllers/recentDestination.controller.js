@@ -124,6 +124,9 @@ export const deleteRecentDestinationHandler = async (req, res, next) => {
             )
         );
     } catch (err) {
+        if (!err.path) {
+            err.path = req.originalUrl;
+        }
         return next(err);
     }
 }

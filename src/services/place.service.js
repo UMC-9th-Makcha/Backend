@@ -20,7 +20,7 @@ export const createPlace = async (payload) => {
             const e = new CustomError(
                 "PLACE-409-001",
                 "Place already exists",
-                "/api/myplaces",
+                null,
                 {
                     fields: ["user_id", "place_type", "provider_place_id"],
                 }
@@ -35,12 +35,12 @@ export const createPlace = async (payload) => {
 // update(PATCH)
 export const updatePlace = async ({user_id, myplace_id, data}) => {
     if (!user_id) {
-        const e = new CustomError("AUTH-401-000", "Unauthorized", "/places");
+        const e = new CustomError("AUTH-401-000", "Unauthorized", null);
         e.statusCode = 401;
         throw e;
     }
     if (!myplace_id) {
-        const e = new CustomError("PLACE-400-003", "Invalid myplace_id", "/places/:myplaceId", {
+        const e = new CustomError("PLACE-400-003", "Invalid myplace_id", null, {
             field: "myplace_id",
         });
         e.statusCode = 400;
@@ -58,7 +58,7 @@ export const updatePlace = async ({user_id, myplace_id, data}) => {
         const e = new CustomError(
             "PLACE-404-001",
             "Place not found",
-            "/places/:myplaceId",
+            null,
             { myplace_id: String(myplace_id) }
         )
         e.statusCode = 404;
@@ -72,7 +72,7 @@ export const updatePlace = async ({user_id, myplace_id, data}) => {
         const e = new CustomError(
             "PLACE-404-001",
             "Place not found",
-            "/myplaces/:myplaceId",
+            null,
             { myplace_id: String(myplace_id) }
         )
         e.statusCode = 404;
@@ -85,12 +85,12 @@ export const updatePlace = async ({user_id, myplace_id, data}) => {
 // delete
 export const removePlace = async ({ user_id, myplace_id }) => {
     if (!user_id) {
-        const e = new CustomError("AUTH-401-000", "Unauthorized", "/places");
+        const e = new CustomError("AUTH-401-000", "Unauthorized", null);
         e.statusCode = 401;
         throw e;
     }
     if (!myplace_id) {
-        const e = new CustomError("PLACE-400-003", "Invalid myplace_id", "/places/:myplaceId", {
+        const e = new CustomError("PLACE-400-003", "Invalid myplace_id", null, {
             field: "myplace_id",
         });
         e.statusCode = 400;
@@ -104,7 +104,7 @@ export const removePlace = async ({ user_id, myplace_id }) => {
     const e = new CustomError(
         "PLACE-404-001",
         "Place not found",
-        "/places/:myplaceId",
+        null,
         { myplace_id: String(myplace_id) }
     )
     e.statusCode = 404;
@@ -117,7 +117,7 @@ export const removePlace = async ({ user_id, myplace_id }) => {
 // GET /api/myplaces - HOME + PLACE 통합 조회
 export const getMyPlaces = async (user_id) => {
     if (!user_id) {
-        const e = new CustomError("AUTH-401-000", "Unauthorized", "/places");
+        const e = new CustomError("AUTH-401-000", "Unauthorized", null);
         e.statusCode = 401;
         throw e;
     }

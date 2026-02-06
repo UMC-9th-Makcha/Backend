@@ -22,6 +22,9 @@ export const getMyInfoHandler = async (req, res, next) => {
             )
         )
     } catch (err) {
+        if (!err.path) {
+            err.path = req.originalUrl;
+        }
         return next(err);
     }
 }
@@ -56,6 +59,9 @@ export const updateMyPhoneHandler = async(req, res, next) => {
             )
         )
     } catch (err) {
+        if (!err.path) {
+            err.path = req.originalUrl;
+        }
         return next(err);
     }
 }

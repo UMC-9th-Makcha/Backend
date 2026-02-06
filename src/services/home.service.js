@@ -12,7 +12,7 @@ import {
 // HOME upsert (홈 설정/변경)
 export const upsertHomeMyPlace = async (user_id, data) => {
     if (!user_id) {
-        const e = new CustomError("AUTH-401-000", "Unauthorized", "/myplaces/home", {});
+        const e = new CustomError("AUTH-401-000", "Unauthorized", null, {});
         e.statusCode = 401;
         throw e;
     }
@@ -24,7 +24,7 @@ export const upsertHomeMyPlace = async (user_id, data) => {
             const e = new CustomError(
                 "HOME-400-001",
                 "Invalid request body",
-                "/myplaces/home",
+                null,
                 { field: key }
             );
             e.statusCode = 400;
@@ -51,7 +51,7 @@ export const upsertHomeMyPlace = async (user_id, data) => {
         });
 
         if (!result || result.count === 0) {
-            const e = new CustomError("HOME-404-001", "Home not found", "/myplaces/home", {});
+            const e = new CustomError("HOME-404-001", "Home not found", null, {});
             e.statusCode = 404;
             throw e;
         }
@@ -91,7 +91,7 @@ export const upsertHomeMyPlace = async (user_id, data) => {
             const e = new CustomError(
                 "HOME-409-001",
                 "Home place already exists",
-                "/myplaces/home",
+                null,
                 { fields: ["user_id", "place_type", "provider_place_id"] }
             );
             e.statusCode = 409;
@@ -104,7 +104,7 @@ export const upsertHomeMyPlace = async (user_id, data) => {
 // HOME delete (홈 삭제)
 export const deleteHomeMyPlace = async (user_id) => {
     if (!user_id) {
-        const e = new CustomError("AUTH-401-000", "Unauthorized", "/myplaces/home", {});
+        const e = new CustomError("AUTH-401-000", "Unauthorized", null, {});
         e.statusCode = 401;
         throw e;
     }

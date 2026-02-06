@@ -21,6 +21,9 @@ export const upsertHomeHandler = async(req, res, next) => {
             )
         );
     } catch (err) {
+        if (!err.path) {
+            err.path = req.originalUrl;
+        }
         return next(err);
     }
 };
@@ -44,6 +47,9 @@ export const removeHomeHandler = async (req, res, next) => {
         );
 
     } catch (err) {
+        if (!err.path) {
+            err.path = req.originalUrl;
+        }
         return next(err);
     }
 }

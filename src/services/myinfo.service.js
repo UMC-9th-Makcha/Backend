@@ -5,16 +5,13 @@ import { findUserById, updateUserPhone } from "../repositories/myinfo.repository
 import { toMyInfoDto } from "../dtos/myinfo.dto.js";
 
 export const getMyInfo = async (userId) => {
-    const userIdBigint =
-        typeof userId === "bigint" ? userId : BigInt(userId);
-
-    const user = await findUserById(userIdBigint);
+    const user = await findUserById(userId);
 
     if (!user) {
         const e = new CustomError(
             "USER-404-001",
             "User not found",
-            "/api/me",
+            null,
             {}
         );
         e.statusCode = 404;
@@ -25,9 +22,6 @@ export const getMyInfo = async (userId) => {
 }
 
 export const updateMyPhone = async (userId, phone) => {
-    const userIdBigint =
-        typeof userId === "bigint" ? userId : BigInt(userId);
-    
     // 숫자만 남김
     const normalizedPhone = phone.replace(/[^0-9]/g, "");
 
@@ -35,7 +29,7 @@ export const updateMyPhone = async (userId, phone) => {
         const e = new CustomError(
             "USER-400-001",
             "Invalid phone number",
-            "/api/me/phone",
+            null,
             { phone }
         );
         e.statusCode = 400;
@@ -43,7 +37,7 @@ export const updateMyPhone = async (userId, phone) => {
     }
 
     const updatedUser = await updateUserPhone(
-        userIdBigint,
+        userId,
         normalizedPhone
     );
 

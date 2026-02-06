@@ -32,6 +32,9 @@ export const createMyPlaceHandler = async(req, res, next) => {
             )
         );
     } catch (err) {
+        if (!err.path) {
+            err.path = req.originalUrl;
+        }
         return next(err);
     }
 };
@@ -73,6 +76,9 @@ export const updateMyPlaceHandler = async(req, res, next) => {
             )
         );
     } catch (err) {
+        if (!err.path) {
+            err.path = req.originalUrl;
+        }
         return next(err);
     }
 };
@@ -110,6 +116,9 @@ export const deleteMyPlaceHandler = async (req, res, next) => {
         );
 
     } catch (err) {
+        if (!err.path) {
+            err.path = req.originalUrl;
+        }
         return next(err);
     }
 }
