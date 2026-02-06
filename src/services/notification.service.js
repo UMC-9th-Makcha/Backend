@@ -48,10 +48,21 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
     else if (diffMin <= 10) initTrigger = 'SENT_THREE';
     else if (diffMin <= 30 ) initTrigger = 'SENT_TEN';
 
+    const user = await notiRepo.getUserById(userId);
+
+    if (!user?.phone_number) {
+        throw new CustomError(
+            "AUTH-404-002",
+            "유저의 전화번호 정보가 없습니다.",
+            "api/alerts"
+        )
+    }
+
     // 6. DB 저장 (notiRepo.addNotification)
     // 여기서 snapshot.origin.stationId가 확실히 있는지 체크 후 전달
     const result = await notiRepo.addNotification({
         user_id: userId,
+        phone_number: user.phone_number,
         station_id: stationIdFromCache,
         route_id: snapshot.routeId || null, 
         title: destination.name,
