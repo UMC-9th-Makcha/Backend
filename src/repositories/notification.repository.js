@@ -166,3 +166,22 @@ export const getUserById = async (user_id) => {
         }
     });
 };
+
+// 역 정보가 없으면 저장하고, 있으면 가져오는 함수
+export const upsertStation = async (stationId, stationName, latitude = null, longitude = null) => {
+    return await prisma.station.upsert({
+        where: { 
+            station_id: BigInt(stationId) 
+        },
+        update: {
+            latitude: latitude,
+            longitude: longitude
+        },
+        create: {
+            station_id: BigInt(stationId),
+            station_name: stationName,
+            latitude: latitude,
+            longitude: longitude
+        }
+    });
+};
