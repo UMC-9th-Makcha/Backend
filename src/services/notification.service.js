@@ -93,12 +93,15 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
 
     // 8. 캐시 삭제 및 SMS 발송
     await deleteRouteToken(cacheKey);
-    // deleteRouteToken(cacheKey);
 
     const userPhoneNumber = result.user?.phone_number;
     if (userPhoneNumber) {
-        await sendSMS(userPhoneNumber, `막차 알림 예약이 완료되었습니다.`);
+    try {
+        await smsUtil.sendVerificationSMS(userPhoneNumber, "막차 알림 예약 완료");
+    } catch (e) {
+        console.error("SMS 발송은 실패했지만 예약은 완료됨:", e.message);
     }
+}
 
     return result;
 }
