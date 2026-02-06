@@ -1,41 +1,56 @@
-const store = new Map(); // token -> { value, expiresAt }
+import redis from "../config/redis.js";
+
+
+// const store = new Map(); // token -> { value, expiresAt }
 
 // cleanup
-const CLEANUP_INTERVAL_MS = 60 * 1000; // 1분
-const ENABLE_CLEANUP = process.env.ROUTE_TOKEN_CLEANUP !== "false";
+// const CLEANUP_INTERVAL_MS = 60 * 1000; // 1분
+// const ENABLE_CLEANUP = process.env.ROUTE_TOKEN_CLEANUP !== "false";
 
-function cleanupExpiredTokens() {
-  const now = Date.now();
-  for (const [token, hit] of store.entries()) {
-    if (now > hit.expiresAt) {
-      store.delete(token);
-    }
-  }
+export async function setRouteToken(token, value, ttlSec = 60 * 30) {
+  const key = `route_token:${token}`;
+  await redis.set(
+    key,
+    JSON.stringify(value),
+    "EX",
+    ttlSec
+  );
 }
 
-let cleanupTimer = null;
-if (ENABLE_CLEANUP) {
-  cleanupTimer = setInterval(cleanupExpiredTokens, CLEANUP_INTERVAL_MS);
+// export function setRouteToken(token, value, ttlSec = 60 * 30) {
+//   const expiresAt = Date.now() + ttlSec * 1000;
+//   store.set(token, { value, expiresAt });
+// }
 
-  if (typeof cleanupTimer.unref === "function") cleanupTimer.unref();
-}
+// export function getRouteToken(token) {
+//   const hit = store.get(token);
+//   if (!hit) return null;
 
-export function setRouteToken(token, value, ttlSec = 60 * 30) {
-  const expiresAt = Date.now() + ttlSec * 1000;
-  store.set(token, { value, expiresAt });
-}
+//   if (Date.now() > hit.expiresAt) {
+//     store.delete(token);
+//     return null;
+//   }
+//   return hit.value;
+// }
 
-export function getRouteToken(token) {
-  const hit = store.get(token);
-  if (!hit) return null;
+export async function getRouteToken(token) {
+  const key = `route_token:${token}`;
+  const raw = await redis.get(key);
+  if (!raw) return null;
 
-  if (Date.now() > hit.expiresAt) {
-    store.delete(token);
+  try {
+    return JSON.parse(raw);
+  } catch {
+    await redis.del(key);
     return null;
   }
-  return hit.value;
 }
 
-export function deleteRouteToken(token) {
-  store.delete(token);
+export async function deleteRouteToken(token) {
+  const key = `route_token:${token}`;
+  await redis.del(key);
 }
+
+// export function deleteRouteToken(token) {
+//   store.delete(token);
+// }
