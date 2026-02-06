@@ -3,28 +3,26 @@ import { CustomError } from "../response/customError.js"; //
 
 // 알림 생성
 export const addNotification = async (data) => {
-    
+    // 필수 데이터 체크
     if (!data.user_id || !data.station_id) {
-        throw new CustomError(
-            "COM-400-001",
-            `필수 데이터 누락: user_id(${data.user_id}), station_id(${data.station_id})`,
-            "api/alerts"
-        )
+        throw new CustomError("COM-400-001", "필수 데이터 누락", "api/alerts");
     }
+
     try {
         const notification = await prisma.notificationTrigger.create({
             data: {
-                user: { connect: { user_id: BigInt(data.user_id) } },
-                station: { connect: { station_id: BigInt(data.station_id) } },
+                // 관계 필드(user) 대신 실제 컬럼 필드(user_id)에 직접 입력
+                user_id: BigInt(data.user_id),
+                station_id: BigInt(data.station_id),
                 
-                ...(data.route_id && {
-                    routeSearch: { connect: { route_id: BigInt(data.route_id) } }
-                }),
+                // route_id가 있을 때만 포함 (필드명 route_id 확인 완료)
+                route_id: data.route_id ? BigInt(data.route_id) : null,
 
                 phone_number: data.phone_number,
-                trigger_time: data.trigger_time,
+                trigger_time: data.trigger_time, // TriggerTime 열거형 값
                 sent_success: false,
                 
+                // 날짜 데이터 처리
                 sent_at: (data.sent_at && !isNaN(new Date(data.sent_at))) 
                     ? new Date(data.sent_at) 
                     : null,
@@ -34,11 +32,12 @@ export const addNotification = async (data) => {
                     : new Date(),
             },
             include: {
-                user: true
+                user: true // 응답에 유저 정보 포함
             }
         });
         return notification;
     } catch (error) {
+        console.error("❌ [Prisma Create Error]:", error);
         throw error;
     }
 };
