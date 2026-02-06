@@ -21,21 +21,7 @@ export const getMyInfo = async (userId) => {
     return toMyInfoDto(user);
 }
 
-export const updateMyPhone = async (userId, phone) => {
-    // 숫자만 남김
-    const normalizedPhone = phone.replace(/[^0-9]/g, "");
-
-    if (normalizedPhone.length < 10 || normalizedPhone.length > 11) {
-        const e = new CustomError(
-            "USER-400-001",
-            "Invalid phone number",
-            null,
-            { phone }
-        );
-        e.statusCode = 400;
-        throw e;
-    }
-
+export const updateMyPhone = async (userId, normalizedPhone) => {
     const updatedUser = await updateUserPhone(
         userId,
         normalizedPhone
