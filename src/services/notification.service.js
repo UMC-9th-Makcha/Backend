@@ -84,9 +84,9 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
     // 7. 최근 목적지 기록
     await recordRecentDestination({
         userId,
-        placeId: destination.placeId,
-        title: destination.name,
-        roadAddress: destination.address,
+        placeId: String(destination.id || destination.placeId || `P${Date.now()}`),
+        title: destination.name || destination.title || "알 수 없는 목적지",
+        roadAddress: destination.address || destination.road_address || "주소 정보 없음",
         latitude: destination.lat,
         longitude: destination.lng
     });
