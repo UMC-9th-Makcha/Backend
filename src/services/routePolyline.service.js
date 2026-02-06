@@ -51,10 +51,8 @@ function expandBoundary(boundary, paths) {
 
 export async function getPolylineByRouteToken({ routeToken }) {
   const PATH = `/api/routes/polylines/${routeToken}`;
+  const cached = await getRouteToken(routeToken);
 
-  const cached = getRouteToken(routeToken);
-
-  // 토큰 없음/만료
   if (!cached) {
     throwCustom(
       "MAP-410-001",
@@ -65,12 +63,29 @@ export async function getPolylineByRouteToken({ routeToken }) {
     );
   }
 
+// export async function getPolylineByRouteToken({ routeToken }) {
+//   const PATH = `/api/routes/polylines/${routeToken}`;
+
+//   const cached = getRouteToken(routeToken);
+
+//   // 토큰 없음/만료
+//   if (!cached) {
+//     throwCustom(
+//       "MAP-410-001",
+//       "경로 토큰이 만료되었거나 존재하지 않습니다.",
+//       PATH,
+//       410,
+//       null,
+//     );
+//   }
+
   const mapObject = cached?.mapObj;
   const walkSegments = cached?.walkSegments ?? [];
 
   // 토큰은 있는데 mapObject 없음
   if (!mapObject) {
-    deleteRouteToken(routeToken);
+    await deleteRouteToken(routeToken);
+    // deleteRouteToken(routeToken);
     throwCustom(
       "MAP-410-002",
       "mapObject가 없어 폴리라인을 생성할 수 없습니다. 경로를 다시 조회해주세요.",
@@ -82,7 +97,8 @@ export async function getPolylineByRouteToken({ routeToken }) {
 
   // mapObject가 이상 -> ODsay 호출 전에 컷 + 토큰 삭제
   if (!isLikelyValidOdsayMapObject(mapObject)) {
-    deleteRouteToken(routeToken);
+    // deleteRouteToken(routeToken);
+    await deleteRouteToken(routeToken);
     throwCustom(
       "MAP-422-001",
       "경로 폴리라인을 조회할 수 없습니다. 경로를 다시 조회해주세요.",
@@ -126,7 +142,8 @@ export async function getPolylineByRouteToken({ routeToken }) {
 
     // -8: mapObject 형식 오류
     if (code === "-8") {
-      deleteRouteToken(routeToken);
+      await deleteRouteToken(routeToken);
+      // deleteRouteToken(routeToken);
       throwCustom(
         "MAP-422-001",
         "경로 폴리라인을 조회할 수 없습니다. 다시 경로를 조회해주세요.",

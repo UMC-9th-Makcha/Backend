@@ -4,8 +4,10 @@ import { sendSMS } from "../utils/sms.util.js"; // SMS 발송 모듈 가정 (추
 import { getRouteToken, deleteRouteToken } from "../utils/routeTokenStore.util.js";
 import { recordRecentDestination } from "./recentDestination.service.js"; // 경로 확인!
 
+// export const registerNotification = async (userId, cacheKey, alert_time) => {
+//     const cachedData = getRouteToken(cacheKey);
 export const registerNotification = async (userId, cacheKey, alert_time) => {
-    const cachedData = getRouteToken(cacheKey);
+    const cachedData = await getRouteToken(cacheKey);
     
     // 캐시 데이터 존재 여부 확인
     if (!cachedData) {
@@ -85,7 +87,8 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
     });
 
     // 8. 캐시 삭제 및 SMS 발송
-    deleteRouteToken(cacheKey);
+    await deleteRouteToken(cacheKey);
+    // deleteRouteToken(cacheKey);
 
     const userPhoneNumber = result.user?.phone_number;
     if (userPhoneNumber) {
