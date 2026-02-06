@@ -140,7 +140,7 @@ router.patch(
  *                 email: "makcha@kakao.com"
  *                 phone: "01012345678"
  *       400:
- *         description: 잘못된 phone (누락/빈값/숫자만 남겼을 때 10~11자리 아님)
+ *         description: 잘못된 phone (누락/빈값/010 제외 길이가 8이 아님)
  *         content:
  *           application/json:
  *             schema:
