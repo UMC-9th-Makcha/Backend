@@ -154,3 +154,15 @@ export const getHistoryList = async (user_id) => {
         take: 10
     })
 }
+
+//유저 ID로 유저 정보(전화번호 등)를 조회하는 함수
+export const getUserById = async (user_id) => {
+    return await prisma.user.findUnique({
+        where: { 
+            user_id: BigInt(user_id) 
+        },
+        select: { 
+            phone_number: true // 서비스에서 번호가 필요하므로 선택해서 가져옴
+        }
+    });
+};

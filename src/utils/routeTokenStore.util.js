@@ -7,23 +7,6 @@ import redis from "../config/redis.js";
 // const CLEANUP_INTERVAL_MS = 60 * 1000; // 1분
 // const ENABLE_CLEANUP = process.env.ROUTE_TOKEN_CLEANUP !== "false";
 
-
-function cleanupExpiredTokens() {
-  const now = Date.now();
-  for (const [token, hit] of store.entries()) {
-    if (now > hit.expiresAt) {
-      store.delete(token);
-    }
-  }
-}
-
-let cleanupTimer = null;
-if (ENABLE_CLEANUP) {
-  cleanupTimer = setInterval(cleanupExpiredTokens, CLEANUP_INTERVAL_MS);
-
-  if (typeof cleanupTimer.unref === "function") cleanupTimer.unref();
-}
-
 export async function setRouteToken(token, value, ttlSec = 60 * 30) {
   const key = `route_token:${token}`;
   await redis.set(
