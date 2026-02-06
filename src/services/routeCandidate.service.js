@@ -797,7 +797,7 @@ export async function getRouteCandidates({ origin, destination }) {
     const route_token = generateRouteToken();
     const walkSegments = extractWalkSegments(c.detail);
 
-    setRouteToken(
+    await setRouteToken(
       route_token,
       {
         mapObj,
@@ -813,6 +813,23 @@ export async function getRouteCandidates({ origin, destination }) {
       },
       30 * 60,
     );
+
+    // setRouteToken(
+    //   route_token,
+    //   {
+    //     mapObj,
+    //     walkSegments,
+    //     snapshot: {
+    //       origin,
+    //       destination,
+    //       tags: c.tags,
+    //       station_id: c.station_id,
+    //       card: c.card,
+    //       detail: c.detail,
+    //     },
+    //   },
+    //   30 * 60,
+    // );
 
     c.route_token = route_token;
     finalPicked.push(c);
