@@ -32,7 +32,7 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
 
     const destination = snapshot.destination;
     const stationIdFromCache = snapshot.station_id
-    const stationName = snapshot.origin.name;
+    const stationName = snapshot.origin.name || snapshot.detail?.steps[1]?.from?.name || "알 수 없는 역";
     const lat = snapshot.origin.lat; // 위도
     const lng = snapshot.origin.lng; // 경도
 
