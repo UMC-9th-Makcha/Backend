@@ -311,7 +311,12 @@ export const getFullNotificationPageData = async (user_id) => {
 
     let currentAlertData = null;
     if (activeTrigger) {
-        const routeData = activeTrigger.routeSearch?.route_data;
+        const rs = activeTrigger.routeSearch;
+        const snapshot = rs?.route_data || {};
+
+        const scheduledTime = new Date(activeTrigger.scheduled);
+        const diffMs = scheduledTime - new Date();
+        const minutesLeft = Math.max(0, Math.floor(diffMs / 60000));
 
         currentAlertData = {
             id: String(activeTrigger.notification_id),
@@ -319,32 +324,47 @@ export const getFullNotificationPageData = async (user_id) => {
             scheduled_time: activeTrigger.scheduled,
             
             // 추가 요청 필드
-            route_token: activeTrigger.routeSearch?.route_token || null,
-            is_optimal: activeTrigger.routeSearch?.is_optimal || false,
+            route_token: rs?.routeSearch?.route_token || null,
+            route_id: rs?.route_id ? String(rs.route_id) : null,
+            is_optimal: rs?.routeSearch?.is_optimal || false,
             
             // 칩 구성을 위한 노선 정보 (지하철/버스 번호)
-            lines: routeData?.tags || [], 
+            lines: snapshot.tags || [], 
             
             // 카드 표시용 요약 정보
-            total_duration_min: routeData?.card?.traveled_time || 0,
-            transfer_count: routeData?.card?.transfer_count || 0,
-            walking_time_min: routeData?.card?.walk_time || 0,
+            total_duration_min: snapshot.card?.traveled_time || 0,
+            transfer_count: snapshot.card?.transfer_count || 0,
+            walking_time_min: snapshot.card?.walk_time || 0,
             
             // 실시간 남은 시간 계산
             minutes_left: Math.max(0, Math.floor((new Date(activeTrigger.scheduled) - new Date()) / 60000))
         };
     }
 
-    return  {
+    // 2. 과거 내역 (history) 상세 매핑 로직 
+    const formattedHistory = historyList.map(h => ({
+        id: String(h.notification_history_id),
+        origin: h.origin_name,
+        destination: h.destination_name,
+        departure_time: h.departure_datetime,
+        arrival_time: h.arrival_datetime,
+        
+        route_token: h.routeSearches?.route_token || null,
+        is_optimal: h.routeSearches?.is_optimal || false,
+        lines: h.route_detail_json?.steps
+            ? h.route_detail_json.steps
+                .filter(s => s.type === "SUBWAY" || s.type === "BUS")
+                .map(s => s.name)
+            : [],
+        total_duration_min: h.duration_minutes || 0,
+        transfer_count: h.transfers || 0,
+        walking_time_min: h.walking_minutes || 0,
+        minutes_left: 0
+    }));
+
+    return {
         user_setting: settings,
         current_alert: currentAlertData,
-        history: historyList.map(h => ({
-            id: String(h.notification_history_id),
-            origin: h.origin_name,
-            destination: h.destination_name,
-            departure_time: h.departure_datetime,
-            arrival_time: h.arrival_datetime,
-            duration: h.duration_minutes
-        }))
+        history: formattedHistory 
     };
 };
