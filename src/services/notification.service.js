@@ -309,16 +309,35 @@ export const getFullNotificationPageData = async (user_id) => {
         notiRepo.getHistoryList(user_id),
     ]);
 
-    return {
-        // 설정된 정보를 보여줌 (userTriggerSettings 관련)
-        user_setting: settings,
-        current_alert: activeTrigger ? {
+    let currentAlertData = null;
+    if (activeTrigger) {
+        const routeData = activeTrigger.routeSearch?.route_data;
+
+        currentAlertData = {
             id: String(activeTrigger.notification_id),
             station_name: activeTrigger.station?.station_name,
             scheduled_time: activeTrigger.scheduled,
-        } : null,
+            
+            // 추가 요청 필드
+            route_token: activeTrigger.routeSearch?.route_token || null,
+            is_optimal: activeTrigger.routeSearch?.is_optimal || false,
+            
+            // 칩 구성을 위한 노선 정보 (지하철/버스 번호)
+            lines: routeData?.tags || [], 
+            
+            // 카드 표시용 요약 정보
+            total_duration_min: routeData?.card?.traveled_time || 0,
+            transfer_count: routeData?.card?.transfer_count || 0,
+            walking_time_min: routeData?.card?.walk_time || 0,
+            
+            // 실시간 남은 시간 계산
+            minutes_left: Math.max(0, Math.floor((new Date(activeTrigger.scheduled) - new Date()) / 60000))
+        };
+    }
 
-        // 과거 이용 내역 리스트
+    return  {
+        user_setting: settings,
+        current_alert: currentAlertData,
         history: historyList.map(h => ({
             id: String(h.notification_history_id),
             origin: h.origin_name,
