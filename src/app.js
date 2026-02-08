@@ -25,11 +25,38 @@ app.use(express.json());
 app.use(cookieParser());
 
 // CORS - 쿠키 전송 필수
+const isProd = process.env.NODE_ENV === 'production';
+
+const allowedOrigins = isProd 
+  ? [
+      'https://makcha.vercel.app',
+      'https://www.makcha.store',  // 병재님이 DNS 추가하면 이것도 사용
+      'https://makcha.store',      // www 없는 버전도 대비
+    ]
+  : [
+      'http://localhost:3000',
+      'http://localhost:5173',     // Vite 기본 포트
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:5173',
+    ];
+
 app.use(
   cors({
-    origin: true, // 요청 origin 그대로 허용, 쿠키 인증 + HTTPS + Nginx 환경에서 안정. 아직 웹배포 전이므로.
-    credentials: true,
-  }),
+    origin: (origin, callback) => {
+      // origin이 없는 경우 (Postman, curl, 모바일 앱 등)는 허용
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.warn(` CORS blocked: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,  // 쿠키 전송 필수
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
 );
 
 // 라우터 연결
