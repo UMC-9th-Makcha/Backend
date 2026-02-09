@@ -71,14 +71,14 @@ class WaitingPlaceService {
     const { lat, lng, category, openOnly, limit } = searchDto;
 
     // 필수 파라미터 검증
-if (lat === undefined || lat === null || lng === undefined || lng === null) {
-  throw new CustomError(
-    'COM-400-001',
-    '필수 파라미터 누락',
-    '/api/waiting-places',  
-    { required: ['lat', 'lng'] }
-  );
-}
+    if (lat === undefined || lat === null || lng === undefined || lng === null) {
+      throw new CustomError(
+        'COM-400-001',
+        '필수 파라미터 누락',
+        '/api/waiting-places',  
+        { required: ['lat', 'lng'] }
+      );
+    }
 
     // 좌표 유효성 검증
     if (!this._isValidCoordinate(lat, lng)) {
@@ -147,10 +147,10 @@ if (lat === undefined || lat === null || lng === undefined || lng === null) {
         
       const MAX_DISTANCE = 5000; //반경 5km
 
-const sortedPlaces = filteredPlaces
-  .filter(p => p.distance <= MAX_DISTANCE)  // 거리 필터 추가
-  .sort((a, b) => a.distance - b.distance)
-  .slice(0, limit)
+      const sortedPlaces = filteredPlaces
+        .filter(p => p.distance <= MAX_DISTANCE)  // 거리 필터 추가
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, limit);
 
       // 장소가 없는 경우 - 에러 대신 빈 배열 반환
       if (sortedPlaces.length === 0) {
@@ -167,8 +167,9 @@ const sortedPlaces = filteredPlaces
           { 
             ...place, 
             recommendReason,
-            thumbnailUrl: place.placeUrl || null,  
-            operatingHours: this._formatOperatingHours(place) 
+            thumbnailUrl: null,  // 카카오 API는 이미지 미제공
+            operatingHours: this._formatOperatingHours(place),  
+            isCurrentlyOpen: this._isCurrentlyOpen(place, currentTime)
           },
           place.distance,
           currentTime
@@ -212,7 +213,7 @@ const sortedPlaces = filteredPlaces
     }
   }
 
-  async getPlaceDetail(placeId) {
+  async getPlaceDetail(placeId, userLat, userLng) {  // 파라미터 추가
     // 필수 파라미터 검증
     if (!placeId) {
       throw new CustomError(
@@ -238,16 +239,28 @@ const sortedPlaces = filteredPlaces
       const recommendReason = this._generateRecommendReason(place, currentTime);
       const kakaoMapUrl = this._generateKakaoMapDeepLink(place);
 
+      // ✅ 수정: 거리 계산 추가
+      let distance = 0;
+      if (userLat && userLng && this._isValidCoordinate(userLat, userLng)) {
+        distance = this.distanceUtil.calculate(
+          userLat, 
+          userLng, 
+          place.lat, 
+          place.lng
+        );
+      }
+
       // 성공 시 데이터만 반환 
       return {
         ...new WaitingPlaceResponseDto(
           { 
             ...place, 
             recommendReason,
-            thumbnailUrl: place.placeUrl || null,       
-            operatingHours: this._formatOperatingHours(place)  
+            thumbnailUrl: null,  // 카카오 API는 이미지 미제공
+            operatingHours: this._formatOperatingHours(place),  
+            isCurrentlyOpen: this._isCurrentlyOpen(place, currentTime) 
           },
-          0,
+          Math.round(distance),  // 0 → 실제 거리
           currentTime
         ),
         kakaoMapUrl,
@@ -433,23 +446,20 @@ const sortedPlaces = filteredPlaces
     if (place.isOpen24Hours) {
       return true;
     }
+    // 실제 영업시간 체크는 추후 구현
+    // 현재는 카카오 API에서 정확한 영업시간 파싱이 어려워 일단 true 반환
     return true;
   }
   
   _formatOperatingHours(place) {
-    // 24시간 영업소인 경우
+    // 24시간 영업인 경우
     if (place.isOpen24Hours) {
       return '24시간 영업';
     }
     
-    // 카테고리별 일반적인 영업시간 (추정치)
-    const defaultHours = {
-      'CAFE': '평일 08:00-22:00',
-      'PC_ROOM': '24시간 영업',
-      'SAUNA': '06:00-22:00'
-    };
-    
-    return defaultHours[place.category] || '영업시간 정보 없음';
+    // 카카오 API는 영업시간 상세 정보를 제공하지 않음
+    // null 반환 (프론트에서 처리)
+    return null;
   }
 }
 

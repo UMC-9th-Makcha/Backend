@@ -12,13 +12,15 @@ export class WaitingPlaceResponseDto {
     this.closingTime = place.closingTime;
     this.phoneNumber = place.phoneNumber;
     this.address = place.address || null;
-    this.isCurrentlyOpen = this._checkOpen(place, currentTime);
+    this.isCurrentlyOpen = place.isCurrentlyOpen !== undefined 
+      ? place.isCurrentlyOpen 
+      : this._checkOpen(place, currentTime);  // Service에서 전달받은 값 우선
     this.recommendReason = place.recommendReason || '';
     this.source = place.source || 'db';
     
-    // ⭐ 썸네일과 운영시간 추가
-    this.thumbnailUrl = place.thumbnailUrl || place.placeUrl || null;
-    this.operatingHours = place.operatingHours || this._getDefaultOperatingHours(place.category, place.isOpen24Hours);
+    // Service에서 전달된 값을 그대로 사용 (기본값 제거)
+    this.thumbnailUrl = place.thumbnailUrl || null;  // placeUrl 폴백 제거
+    this.operatingHours = place.operatingHours || null;  // 기본값 제거
   }
 
   _checkOpen(place, currentTime) {
@@ -34,21 +36,5 @@ export class WaitingPlaceResponseDto {
     }
     
     return now < closing;
-  }
-  
-  // ⭐ 기본 운영시간 생성 메서드 추가
-  _getDefaultOperatingHours(category, isOpen24Hours) {
-    if (isOpen24Hours) {
-      return '24시간 영업';
-    }
-    
-    const defaultHours = {
-      'CAFE': '평일 08:00-22:00',
-      'PC_ROOM': '24시간 영업',
-      'SAUNA': '06:00-22:00',
-      'RESTAURANT': '평일 11:00-21:00'
-    };
-    
-    return defaultHours[category] || '영업시간 정보 없음';
   }
 }
