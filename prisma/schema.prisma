@@ -130,6 +130,8 @@ model RouteSearch {
 
   notificationTriggers  NotificationTrigger[]
   notificationHistories NotificationHistory[]
+
+  @@map("routesearch")
 }
 
 model SaveReport {
