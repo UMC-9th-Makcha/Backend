@@ -41,4 +41,4 @@ export const sendSMS = async (phoneNumber, text) => {
   await sendMessage(phoneNumber, `[Makcha] ${text}`);
 };
 
-export default { sendVerificationSMS, sendSMS };
+export default { sendVerificationSMS };
