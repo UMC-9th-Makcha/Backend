@@ -20,10 +20,6 @@ import waitingPlaceRouter from "./routes/waitingPlace.route.js";
 
 const app = express();
 
-BigInt.prototype.toJSON = function() {
-  return this.toString();
-};
-
 // 미들웨어 설정 (순서 중요!)
 app.use(express.json());
 app.use(cookieParser());
