@@ -44,8 +44,9 @@ class FacilityService {
         facilities = results.flatMap(r => r.places);
       }
 
-      // 거리 계산 및 정렬
-      // 수정: thumbnailUrl과 operatingHours 추가
+      const currentTime = new Date();
+
+      // 거리 계산 및 필드 추가
       const facilitiesWithDistance = facilities.map(facility => ({
         ...facility,
         distance: this.distanceUtil.calculate(
@@ -54,8 +55,9 @@ class FacilityService {
           facility.lat,
           facility.lng
         ),
-        thumbnailUrl: facility.placeUrl || null, 
-        operatingHours: this._formatOperatingHours(facility)  
+        thumbnailUrl: null,  // 카카오 API는 이미지 미제공
+        operatingHours: this._formatOperatingHours(facility), 
+        isCurrentlyOpen: this._isCurrentlyOpen(facility, currentTime)  
       }));
 
       const sortedFacilities = facilitiesWithDistance.sort((a, b) => a.distance - b.distance);
@@ -131,9 +133,9 @@ class FacilityService {
       });
 
       const facilities = result.places;
+      const currentTime = new Date();
 
-      // 거리 계산 및 정렬
-      // 수정: thumbnailUrl과 operatingHours 추가
+      // 거리 계산 및 필드 추가
       const facilitiesWithDistance = facilities.map(facility => ({
         ...facility,
         distance: this.distanceUtil.calculate(
@@ -142,8 +144,9 @@ class FacilityService {
           facility.lat,
           facility.lng
         ),
-        thumbnailUrl: facility.placeUrl || null,  
-        operatingHours: this._formatOperatingHours(facility) 
+        thumbnailUrl: null,  // 카카오 API는 이미지 미제공
+        operatingHours: this._formatOperatingHours(facility),  
+        isCurrentlyOpen: this._isCurrentlyOpen(facility, currentTime)  
       }));
 
       const sortedFacilities = facilitiesWithDistance.sort((a, b) => a.distance - b.distance);
@@ -204,28 +207,32 @@ class FacilityService {
     }
   }
 
-  /**
-   * 운영시간 포맷팅 헬퍼 메서드
-   * 🆕 새로 추가된 메서드
+  /*
+   운영시간 포맷팅 헬퍼 메서드
    */
   _formatOperatingHours(facility) {
-    // 24시간 영업소인 경우
+    // 24시간 영업인 경우
     if (facility.isOpen24Hours) {
       return '24시간 영업';
     }
     
-    // 카테고리별 일반적인 영업시간 (추정치)
-    const defaultHours = {
-      'CAFE': '평일 08:00-22:00',
-      'PC_ROOM': '24시간 영업',
-      'SAUNA': '06:00-22:00',
-      'RESTAURANT': '평일 11:00-22:00',
-      'PARK': '상시 개방',
-      'LIBRARY': '평일 09:00-18:00',
-      'SHOPPING_MALL': '평일 10:00-22:00'
-    };
+    // 카카오 API는 영업시간 상세 정보를 제공하지 않음
+    // null 반환 (프론트에서 처리)
+    return null;
+  }
+
+  /**
+   현재 영업 중인지 확인하는 헬퍼 메서드
+   */
+  _isCurrentlyOpen(facility, currentTime) {
+    // 24시간 영업이면 항상 true
+    if (facility.isOpen24Hours) {
+      return true;
+    }
     
-    return defaultHours[facility.category] || '영업시간 정보 없음';
+    // 실제 영업시간 체크는 추후 구현
+    // 현재는 카카오 API에서 정확한 영업시간 파싱이 어려워 일단 true 반환
+    return true;
   }
 }
 
