@@ -26,6 +26,9 @@ app.use(cookieParser());
 
 // CORS - 개발/운영 모두 허용으로 수정
 const allowedOrigins = [
+  // Swagger / API 서버
+  'https://api.makcha.store',
+  
   // 운영 환경
   'https://makcha.vercel.app',
   'https://www.makcha.store',
