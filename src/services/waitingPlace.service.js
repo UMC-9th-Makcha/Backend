@@ -68,7 +68,7 @@ class WaitingPlaceService {
 
   async findNearbyPlaces(searchDto) {
     const currentTime = new Date();
-    const { lat, lng, category, openOnly, limit } = searchDto;
+    const { lat, lng, category, openOnly, limit, sort } = searchDto;  
 
     // 필수 파라미터 검증
     if (lat === undefined || lat === null || lng === undefined || lng === null) {
@@ -147,10 +147,11 @@ class WaitingPlaceService {
         
       const MAX_DISTANCE = 5000; //반경 5km
 
-      const sortedPlaces = filteredPlaces
-        .filter(p => p.distance <= MAX_DISTANCE)  // 거리 필터 추가
-        .sort((a, b) => a.distance - b.distance)
-        .slice(0, limit);
+      // 정렬 로직 적용
+      const sortedPlaces = this._sortPlaces(
+        filteredPlaces.filter(p => p.distance <= MAX_DISTANCE),
+        sort
+      ).slice(0, limit);
 
       // 장소가 없는 경우 - 에러 대신 빈 배열 반환
       if (sortedPlaces.length === 0) {
@@ -239,7 +240,7 @@ class WaitingPlaceService {
       const recommendReason = this._generateRecommendReason(place, currentTime);
       const kakaoMapUrl = this._generateKakaoMapDeepLink(place);
 
-      // ✅ 수정: 거리 계산 추가
+      // 거리 계산 추가
       let distance = 0;
       if (userLat && userLng && this._isValidCoordinate(userLat, userLng)) {
         distance = this.distanceUtil.calculate(
@@ -393,7 +394,7 @@ class WaitingPlaceService {
     }
   }
 
-  // 좌표 유효성 검증 헬퍼 메서드 추가
+  // 좌표 유효성 검증 헬퍼 메서드
   _isValidCoordinate(lat, lng) {
     const latitude = parseFloat(lat);
     const longitude = parseFloat(lng);
@@ -460,6 +461,31 @@ class WaitingPlaceService {
     // 카카오 API는 영업시간 상세 정보를 제공하지 않음
     // null 반환 (프론트에서 처리)
     return null;
+  }
+
+  /**
+   * 정렬 로직
+   * @param {Array} places - 정렬할 장소 목록
+   * @param {string} sortOption - 정렬 옵션 ('distance' 또는 '24hour')
+   * @returns {Array} 정렬된 장소 목록
+   */
+  _sortPlaces(places, sortOption) {
+    switch (sortOption) {
+      case '24hour':
+        // 24시간 영업소 우선, 그 다음 거리순
+        return places.sort((a, b) => {
+          // 24시간 영업 여부로 먼저 정렬
+          if (a.isOpen24Hours && !b.isOpen24Hours) return -1;
+          if (!a.isOpen24Hours && b.isOpen24Hours) return 1;
+          // 같은 24시간 상태면 거리순
+          return a.distance - b.distance;
+        });
+        
+      case 'distance':
+      default:
+        // 거리순 정렬 (기본값)
+        return places.sort((a, b) => a.distance - b.distance);
+    }
   }
 }
 

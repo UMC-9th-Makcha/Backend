@@ -1,16 +1,17 @@
 export class WaitingPlaceSearchDto {
-  constructor({ lat, lng, category, openOnly = true, limit = 10 }) {
+  constructor({ lat, lng, category, openOnly = true, limit = 10, sort = 'distance' }) {  
     this.lat = parseFloat(lat);
     this.lng = parseFloat(lng);
     this.category = category || null;
     this.openOnly = openOnly === true || openOnly === 'true';
     this.limit = parseInt(limit);
+    this.sort = sort || 'distance';  
   }
 
   validate() {
     const errors = [];
 
-    // 수정: lat === undefined || lat === null 체크로 변경
+    // lat === undefined || lat === null 체크로 변경
     if (this.lat === undefined || this.lat === null || isNaN(this.lat) || this.lat < -90 || this.lat > 90) {
       errors.push({ 
         field: 'lat', 
@@ -18,7 +19,7 @@ export class WaitingPlaceSearchDto {
       });
     }
 
-    // 수정: lng === undefined || lng === null 체크로 변경
+    // lng === undefined || lng === null 체크로 변경
     if (this.lng === undefined || this.lng === null || isNaN(this.lng) || this.lng < -180 || this.lng > 180) {
       errors.push({ 
         field: 'lng', 
@@ -26,7 +27,7 @@ export class WaitingPlaceSearchDto {
       });
     }
 
-    // ⭐ RESTAURANT 추가
+    // RESTAURANT 추가
     if (this.category && !['CAFE', 'PC_ROOM', 'SAUNA', 'RESTAURANT'].includes(this.category)) {
       errors.push({ 
         field: 'category', 
@@ -38,6 +39,15 @@ export class WaitingPlaceSearchDto {
       errors.push({ 
         field: 'limit', 
         message: 'limit은 1에서 50 사이여야 합니다.' 
+      });
+    }
+
+    // sort 유효성 검증 추가
+    const validSortOptions = ['distance', '24hour'];
+    if (!validSortOptions.includes(this.sort)) {
+      errors.push({ 
+        field: 'sort', 
+        message: `sort는 ${validSortOptions.join(', ')} 중 하나여야 합니다.` 
       });
     }
 
