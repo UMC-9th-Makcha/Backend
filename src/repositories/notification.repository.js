@@ -145,6 +145,27 @@ export const getActiveTrigger = async (user_id) => {
     });
 };
 
+export const upsertSaveReport = async (user_id, month, savedFare) => {
+    return await prisma.saveReport.upsert({
+        where: {
+            user_id_month: {
+                user_id: BigInt(user_id),
+                month: month
+            }
+        },
+        update: {
+            total_count: { increment: 1 },
+            saved_amount: { increment: savedFare }
+        },
+        create: {
+            user_id: BigInt(user_id),
+            month: month,
+            total_count: 1,
+            saved_amount: savedFare
+        }
+    });
+};
+
 //과거 발송 완료된 히스토리 리스트 조회
 export const getHistoryList = async (user_id) => {
     return await prisma.notificationHistory.findMany({
@@ -184,3 +205,4 @@ export const upsertStation = async (stationId, stationName, latitude = null, lon
         }
     });
 };
+

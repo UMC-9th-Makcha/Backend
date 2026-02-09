@@ -4,8 +4,6 @@ import { sendSMS } from "../utils/sms.util.js"; // SMS 발송 모듈 가정 (추
 import { getRouteToken, deleteRouteToken } from "../utils/routeTokenStore.util.js";
 import { recordRecentDestination } from "./recentDestination.service.js"; // 경로 확인!
 
-// export const registerNotification = async (userId, cacheKey, alert_time) => {
-//     const cachedData = getRouteToken(cacheKey);
 export const registerNotification = async (userId, cacheKey, alert_time) => {
     const cachedData = await getRouteToken(cacheKey);
     
@@ -19,6 +17,16 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
     }
 
     const { snapshot } = cachedData;
+
+    //알림 생성 전 RouteSearch 테이블에 경로 상세 정보 먼저 저장
+    const routeSearchRecord = await prisma.routeSearch.create({
+        data: {
+            user_id: BigInt(userId),
+            route_token: snapshot.route_token || cacheKey,
+            route_data: snapshot,
+            is_optimal: snapshot.is_optimal || false,
+        }
+    })
 
     // 필수 하위 데이터 존재 확인
     if (!snapshot.origin || !snapshot.destination) {
@@ -71,7 +79,7 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
         user_id: userId,
         phone_number: user.phone_number,
         station_id: stationIdFromCache,
-        route_id: snapshot.routeId || null, 
+        route_id: routeSearchRecord.route_id,
         title: destination.name,
         latitude: destination.lat,
         longitude: destination.lng,
@@ -258,6 +266,25 @@ export const checkAndSendNotifications = async () => {
                             origin_name: noti.station?.station_name,
                             destination_name: noti.title
                         });
+
+                        const newHistory = await notiRepo.createHistory({
+                        ...noti,
+                        origin_name: noti.station?.station_name,
+                        destination_name: noti.title
+                    });
+
+                // 세이브리포트 집계 갱신
+                    const departureDate = new Date(noti.scheduled);
+                    const seoulMonth = parseInt(departureDate.toLocaleString('ko-KR', {
+                        timeZone: 'Asia/Seoul',
+                        month: 'numeric'
+                    }).replace('월', ''));
+
+                    // 절약 금액 가져오기
+                    const saveFare = noti.route_search?.route_data?.taxi_fare || 0;
+
+                    await notiRepo.upsertSaveReport(noti.user_id, seoulMonth, savedFare);
+                
                     } catch (hisError) {
                         console.error("히스토리 저장 실패:", hisError);
                     }
