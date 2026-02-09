@@ -15,8 +15,8 @@ export const addNotification = async (data) => {
                 user_id: BigInt(data.user_id),
                 station_id: BigInt(data.station_id),
                 
-                // route_id가 있을 때만 포함 (필드명 route_id 확인 완료)
-                route_id: data.route_id ? BigInt(data.route_id) : null,
+                // 알림 생성 시 route_id 내부적으로 생성
+                route_id: BigInt(data.route_id),
 
                 phone_number: data.phone_number,
                 trigger_time: data.trigger_time, // TriggerTime 열거형 값
@@ -145,6 +145,27 @@ export const getActiveTrigger = async (user_id) => {
     });
 };
 
+export const upsertSaveReport = async (user_id, month, savedFare) => {
+    return await prisma.saveReport.upsert({
+        where: {
+            user_id_month: {
+                user_id: BigInt(user_id),
+                month: month
+            }
+        },
+        update: {
+            total_count: { increment: 1 },
+            saved_amount: { increment: savedFare }
+        },
+        create: {
+            user_id: BigInt(user_id),
+            month: month,
+            total_count: 1,
+            saved_amount: savedFare
+        }
+    });
+};
+
 //과거 발송 완료된 히스토리 리스트 조회
 export const getHistoryList = async (user_id) => {
     return await prisma.notificationHistory.findMany({
@@ -184,3 +205,4 @@ export const upsertStation = async (stationId, stationName, latitude = null, lon
         }
     });
 };
+
