@@ -15,7 +15,7 @@ const sendVerificationSMS = async (phoneNumber, code) => {
         message: {
           to: phoneNumber,
           from: process.env.SOLAPI_SENDER,
-          text: `[Makcha] 인증번호는 ${code} 입니다.`,
+          text: `[Makcha] ${code}`,
         },
       },
       {

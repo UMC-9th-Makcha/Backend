@@ -113,7 +113,7 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
     const userPhoneNumber = result.user?.phone_number;
     if (userPhoneNumber) {
     try {
-        await smsUtil.sendVerificationSMS(userPhoneNumber, "막차 알림 예약 완료");
+        await smsUtil.sendVerificationSMS(userPhoneNumber, "설정하신 경로의 막차 알림이 정상적으로 등록되었습니다. 막차 출발 전, 단계별로 알림을 보내드립니다.");
     } catch (e) {
         console.error("SMS 발송은 실패했지만 예약은 완료됨:", e.message);
     }
@@ -389,7 +389,7 @@ export const getFullNotificationPageData = async (user_id) => {
     }
 
     const formattedHistory = historyList.map(h => {
-
+    // 관계 데이터가 아예 없을 수도 있으니 옵셔널 체이닝 사용
     const rs = h.route_search || h.routeSearches;
 
     return {
@@ -401,20 +401,18 @@ export const getFullNotificationPageData = async (user_id) => {
         
         route_id: rs?.route_id ? String(rs.route_id) : (h.route_search_id ? String(h.route_search_id) : null),
         route_token: rs?.route_token || null,
-        is_optimal: rs?.is_optimal || false,
         
+        is_optimal: rs?.is_optimal || false,
         lines: h.route_detail_json?.steps
-                ? h.route_detail_json.steps
-                    .filter(s => s.type?.includes("SUBWAY") || s.type?.includes("BUS")) 
-                    .map(s => s.name || (s.type?.includes("SUBWAY") ? "지하철" : "버스"))
-                : [],
-
+            ? h.route_detail_json.steps
+                .filter(s => s.type?.includes("SUBWAY") || s.type?.includes("BUS")) 
+                .map(s => s.name || (s.type?.includes("SUBWAY") ? "지하철" : "버스"))
+            : [],
         total_duration_min: h.duration_minutes || 0,
         transfer_count: h.transfers || 0,
         walking_time_min: h.walking_minutes || 0,
         minutes_left: 0
     };
-
 });
 
     return {
