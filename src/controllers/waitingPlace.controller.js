@@ -90,6 +90,7 @@ class WaitingPlaceController {
   async getPlaceDetail(req, res, next) {
     try {
       const { placeId } = req.params;
+      const { lat, lng } = req.query;  // 사용자 위치 받기
 
       if (!placeId) {
         // CustomError 사용
@@ -100,7 +101,12 @@ class WaitingPlaceController {
         );
       }
 
-      const result = await this.service.getPlaceDetail(placeId);
+      // lat, lng 파라미터 추가
+      const result = await this.service.getPlaceDetail(
+        placeId,
+        lat ? parseFloat(lat) : null,
+        lng ? parseFloat(lng) : null
+      );
 
       // CustomSuccess 사용
       const response = new CustomSuccess(
