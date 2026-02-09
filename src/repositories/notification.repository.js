@@ -171,6 +171,9 @@ export const getHistoryList = async (user_id) => {
     return await prisma.notificationHistory.findMany({
         where: { user_id: BigInt(user_id) },
         orderBy: { departure_datetime: 'desc' },
+        include: {
+            routeSearches: true
+        },
         take: 10
     })
 }

@@ -115,6 +115,10 @@ model RouteSearch {
   route_id      BigInt    @id @default(autoincrement())
   user_id       BigInt
   station_id    BigInt
+  route_token   String?
+  saved_fare    Int?
+  route_data    Json?     
+  is_optimal    Boolean?  @default(false)
   end_address   String?   @db.VarChar(200)
   searched_at   DateTime? @default(now())
   is_success    Boolean?
