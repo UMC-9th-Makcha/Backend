@@ -142,6 +142,19 @@ const refresh = async (refreshToken) => {
       refreshToken: newRefreshToken,
     };
   } catch (err) {
+    // JWT 에러는 401로 처리
+    if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+      throw new CustomError(
+        'AUTH-401-004',
+        'Refresh Token 만료 또는 오류',
+        'auth.service.refresh'
+      );
+    }
+    // CustomError는 그대로 throw
+    if (err instanceof CustomError) {
+      throw err;
+    }
+    // 그 외 에러는 401로 처리 (500 방지)
     throw new CustomError(
       'AUTH-401-004',
       'Refresh Token 만료 또는 오류',

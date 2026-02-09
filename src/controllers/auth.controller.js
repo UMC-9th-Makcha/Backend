@@ -6,6 +6,16 @@ const isProd = process.env.NODE_ENV === 'production'; //http 상태(웹 미배�
 // 30일
 const REFRESH_COOKIE_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
 
+// 쿠키 옵션을 별도로 정의
+const getCookieOptions = () => ({
+  httpOnly: true,
+  secure: true, // 프로덕션에서는 항상 true
+  sameSite: 'none', // 크로스 도메인을 위해 'none'으로 설정
+  maxAge: REFRESH_COOKIE_MAX_AGE,
+  domain: isProd ? '.makcha.store' : undefined, // 서브도메인 간 공유
+  path: '/',
+});
+
 //POST /auth/kakao 카카오 로그인 컨트롤러
 const kakaoLogin = async (req, res, next) => {
     try {
@@ -22,16 +32,9 @@ const kakaoLogin = async (req, res, next) => {
       
       // redirectUri를 service로 전달
       const result = await authService.kakaoLogin(code, redirectUri);
-  
-      // Refresh Token 쿠키 저장
-      res.cookie('refreshToken', result.refreshToken, {
-        httpOnly: true,
-        secure: isProd, 
-        // secure: true,
-        sameSite: isProd ? 'none' : 'lax', 
-        maxAge: REFRESH_COOKIE_MAX_AGE, //기간 연장
-        // sameSite: 'none',
-      });
+      
+      // 수정된 쿠키 옵션 사용
+      res.cookie('refreshToken', result.refreshToken, getCookieOptions());
   
       const response = new CustomSuccess(
         'AUTH-200-001',
@@ -61,14 +64,7 @@ const kakaoLogin = async (req, res, next) => {
   
       const result = await authService.refresh(refreshToken);
   
-      res.cookie('refreshToken', result.refreshToken, {
-        httpOnly: true,
-        secure: isProd,
-        // secure: true,
-        sameSite: isProd ? 'none' : 'lax', 
-        maxAge: REFRESH_COOKIE_MAX_AGE,
-        //sameSite: 'none',
-      });
+      res.cookie('refreshToken', result.refreshToken, getCookieOptions());
   
       const response = new CustomSuccess(
         'AUTH-200-002',
@@ -91,11 +87,7 @@ const logout = async (req, res, next) => {
     await authService.logout(userId);
 
     // refreshToken 쿠키 삭제
-    res.clearCookie('refreshToken', {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: isProd ? 'none' : 'lax',
-    });
+    res.clearCookie('refreshToken', getCookieOptions());
 
     const response = new CustomSuccess(
       'AUTH-200-004',
@@ -117,11 +109,7 @@ const withdraw = async (req, res, next) => {
     await authService.withdraw(user);
 
     // refreshToken 쿠키 삭제
-    res.clearCookie('refreshToken', {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: isProd ? 'none' : 'lax',
-    });
+    res.clearCookie('refreshToken', getCookieOptions());
 
     const response = new CustomSuccess(
       'AUTH-200-005',
