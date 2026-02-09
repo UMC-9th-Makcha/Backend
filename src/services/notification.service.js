@@ -3,6 +3,7 @@ import { CustomError } from "../response/customError.js"; // 파일 경로와 �
 import { sendSMS } from "../utils/sms.util.js"; // SMS 발송 모듈 가정 (추후 변경)
 import { getRouteToken, deleteRouteToken } from "../utils/routeTokenStore.util.js";
 import { recordRecentDestination } from "./recentDestination.service.js"; // 경로 확인!
+import prisma from '../database/prisma.js'
 
 export const registerNotification = async (userId, cacheKey, alert_time) => {
     const cachedData = await getRouteToken(cacheKey);
