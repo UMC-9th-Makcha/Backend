@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import authRepository from '../repositories/auth.repository.js';
 import { CustomError } from '../response/customError.js';
 
+const refreshCache = new Map();
+
 /**
  * 카카오 로그인 서비스
  * @param {string} code - 카카오 인가 코드
@@ -102,6 +104,13 @@ const kakaoLogin = async (code, redirectUri ) => { // redirectUri 파라미터 �
 //카카오톡 토큰 재발급 api
 const refresh = async (refreshToken) => {
   try {
+    // 1. 캐시된 결과가 있으면 즉시 반환 (10초 이내)
+    const cached = refreshCache.get(refreshToken);
+    if (cached && Date.now() - cached.timestamp < 10000) {
+      console.log('Cached refresh token result returned');
+      return cached.result;
+    }
+
     // RT 검증
     const payload = jwt.verify(refreshToken, process.env.JWT_SECRET);
 
@@ -109,6 +118,7 @@ const refresh = async (refreshToken) => {
     const user = await authRepository.findUserById(payload.userId);
 
     if (!user || user.refresh_token !== refreshToken) {
+      refreshCache.delete(refreshToken); // 캐시 정리
       throw new CustomError(
         'AUTH-401-003',
         'Refresh Token 무효',
@@ -137,10 +147,23 @@ const refresh = async (refreshToken) => {
     // RT 교체 
     await authRepository.updateRefreshToken(user.user_id, newRefreshToken);
 
-    return {
+    const result = {
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
     };
+
+    // 6. 캐시 저장 (10초)
+    refreshCache.set(refreshToken, {
+      result,
+      timestamp: Date.now()
+    });
+
+    // 7. 오래된 캐시 자동 정리
+    setTimeout(() => {
+      refreshCache.delete(refreshToken);
+    }, 10000);
+
+    return result;
   } catch (err) {
     // JWT 에러는 401로 처리
     if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
