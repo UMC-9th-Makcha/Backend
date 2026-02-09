@@ -1,6 +1,6 @@
 import * as notiRepo from "../repositories/notification.repository.js";
 import { CustomError } from "../response/customError.js"; // 파일 경로와 확장자 확인 필요
-import { sendSMS } from "../utils/sms.util.js"; // SMS 발송 모듈 가정 (추후 변경)
+import smsUtil, { sendSMS } from "../utils/sms.util.js";
 import { getRouteToken, deleteRouteToken } from "../utils/routeTokenStore.util.js";
 import { recordRecentDestination } from "./recentDestination.service.js"; // 경로 확인!
 import prisma from '../database/prisma.js'
@@ -19,10 +19,23 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
 
     const { snapshot } = cachedData;
 
+    const destination = snapshot.destination;
+    const stationIdFromCache = snapshot.station_id
+    const stationName = snapshot.origin.name || snapshot.detail?.steps[1]?.from?.name || "알 수 없는 역";
+    const lat = snapshot.origin.lat; // 위도
+    const lng = snapshot.origin.lng; // 경도
+
+    await notiRepo.upsertStation(stationIdFromCache, stationName, lat, lng);
+
     //알림 생성 전 RouteSearch 테이블에 경로 상세 정보 먼저 저장
     const routeSearchRecord = await prisma.routeSearch.create({
         data: {
-            user_id: BigInt(userId),
+            user: {
+            connect: { user_id: BigInt(userId) } // DB에 있는 기존 유저와 연결
+        },
+        station: {
+            connect: { station_id: BigInt(snapshot.station_id) } 
+        },
             route_token: snapshot.route_token || cacheKey,
             route_data: snapshot,
             is_optimal: snapshot.is_optimal || false,
@@ -38,12 +51,6 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
             "api/alerts"
         );
     }
-
-    const destination = snapshot.destination;
-    const stationIdFromCache = snapshot.station_id
-    const stationName = snapshot.origin.name || snapshot.detail?.steps[1]?.from?.name || "알 수 없는 역";
-    const lat = snapshot.origin.lat; // 위도
-    const lng = snapshot.origin.lng; // 경도
 
     if (!stationIdFromCache) {
         throw new CustomError("COM-400-001", "출발역 정보가 누락되었습니다.", "api/alerts");
@@ -263,28 +270,22 @@ export const checkAndSendNotifications = async () => {
                 if (nextTrigger === null || message.includes("실시간")) {
                     try {
                         await notiRepo.createHistory({
-                            ...noti,
+                            user_id: noti.user_id,
+                            notification_id: noti.notification_id,
+                            route_id: noti.route_id,
+                            scheduled: noti.scheduled,
                             origin_name: noti.station?.station_name,
                             destination_name: noti.title
                         });
 
-                        const newHistory = await notiRepo.createHistory({
-                        ...noti,
-                        origin_name: noti.station?.station_name,
-                        destination_name: noti.title
-                    });
-
                 // 세이브리포트 집계 갱신
                     const departureDate = new Date(noti.scheduled);
-                    const seoulMonth = parseInt(departureDate.toLocaleString('ko-KR', {
-                        timeZone: 'Asia/Seoul',
-                        month: 'numeric'
-                    }).replace('월', ''));
+                    const monthStr = departureDate.toISOString().slice(0, 7);
 
                     // 절약 금액 가져오기
-                    const saveFare = noti.route_search?.route_data?.taxi_fare || 0;
+                    const savedFare = noti.route_search?.route_data?.taxi_fare || 0;
 
-                    await notiRepo.upsertSaveReport(noti.user_id, seoulMonth, savedFare);
+                    await notiRepo.upsertSaveReport(noti.user_id, monthStr, savedFare);
                 
                     } catch (hisError) {
                         console.error("히스토리 저장 실패:", hisError);
@@ -344,7 +345,6 @@ export const getFullNotificationPageData = async (user_id) => {
 
         const scheduledTime = new Date(activeTrigger.scheduled);
         const diffMs = scheduledTime - new Date();
-        const minutesLeft = Math.max(0, Math.floor(diffMs / 60000));
 
         currentAlertData = {
             id: String(activeTrigger.notification_id),
@@ -352,9 +352,9 @@ export const getFullNotificationPageData = async (user_id) => {
             scheduled_time: activeTrigger.scheduled,
             
             // 추가 요청 필드
-            route_token: rs?.routeSearch?.route_token || null,
+            route_token: rs?.route_token || null, 
             route_id: rs?.route_id ? String(rs.route_id) : null,
-            is_optimal: rs?.routeSearch?.is_optimal || false,
+            is_optimal: rs?.is_optimal || snapshot.is_optimal || false,
             
             // 칩 구성을 위한 노선 정보 (지하철/버스 번호)
             lines: snapshot.tags || [], 
@@ -367,18 +367,25 @@ export const getFullNotificationPageData = async (user_id) => {
             // 실시간 남은 시간 계산
             minutes_left: Math.max(0, Math.floor((new Date(activeTrigger.scheduled) - new Date()) / 60000))
         };
+
+        console.log("SNAPSHOT_CHECK:", snapshot.is_optimal)
     }
 
-    // 2. 과거 내역 (history) 상세 매핑 로직 
-    const formattedHistory = historyList.map(h => ({
+    const formattedHistory = historyList.map(h => {
+
+    const rs = h.route_search || h.routeSearches;
+
+    return {
         id: String(h.notification_history_id),
         origin: h.origin_name,
         destination: h.destination_name,
         departure_time: h.departure_datetime,
         arrival_time: h.arrival_datetime,
         
-        route_token: h.routeSearches?.route_token || null,
-        is_optimal: h.routeSearches?.is_optimal || false,
+        route_id: rs?.route_id ? String(rs.route_id) : (h.route_search_id ? String(h.route_search_id) : null),
+        route_token: rs?.route_token || null,
+        is_optimal: rs?.is_optimal || false,
+        
         lines: h.route_detail_json?.steps
             ? h.route_detail_json.steps
                 .filter(s => s.type === "SUBWAY" || s.type === "BUS")
@@ -388,7 +395,8 @@ export const getFullNotificationPageData = async (user_id) => {
         transfer_count: h.transfers || 0,
         walking_time_min: h.walking_minutes || 0,
         minutes_left: 0
-    }));
+    };
+});
 
     return {
         user_setting: settings,
