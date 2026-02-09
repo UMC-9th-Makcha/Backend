@@ -15,8 +15,8 @@ export const addNotification = async (data) => {
                 user_id: BigInt(data.user_id),
                 station_id: BigInt(data.station_id),
                 
-                // route_id가 있을 때만 포함 (필드명 route_id 확인 완료)
-                route_id: data.route_id ? BigInt(data.route_id) : null,
+                // 알림 생성 시 route_id 내부적으로 생성
+                route_id: BigInt(data.route_id),
 
                 phone_number: data.phone_number,
                 trigger_time: data.trigger_time, // TriggerTime 열거형 값
