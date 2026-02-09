@@ -357,7 +357,24 @@ export const getFullNotificationPageData = async (user_id) => {
             is_optimal: rs?.is_optimal || snapshot.is_optimal || false,
             
             // 칩 구성을 위한 노선 정보 (지하철/버스 번호)
-            lines: snapshot.tags || [], 
+            lines: snapshot.detail?.steps
+                ? snapshot.detail.steps
+                    .filter(s => s.type?.includes("SUBWAY") || s.type?.includes("BUS"))
+                    .map(s => {
+                        if (s.type?.includes("SUBWAY")) {
+                            // 1순위: subway_lines[0] ("수도권 6호선")
+                            // 2순위: s.name ("6호선")
+                            // 3순위: 기본값 "지하철"
+                            return (s.subway_lines && s.subway_lines[0]) || s.name || "지하철";
+                        }
+                        if (s.type?.includes("BUS")) {
+                            // 1순위: bus_numbers[0] ("7700")
+                            // 2순위: s.name ("7700")
+                            return (s.bus_numbers && s.bus_numbers[0]) || s.name || "버스";
+                        }
+                        return s.name;
+                    })
+    : (snapshot.tags || []),
             
             // 카드 표시용 요약 정보
             total_duration_min: snapshot.card?.traveled_time || 0,
@@ -387,15 +404,17 @@ export const getFullNotificationPageData = async (user_id) => {
         is_optimal: rs?.is_optimal || false,
         
         lines: h.route_detail_json?.steps
-            ? h.route_detail_json.steps
-                .filter(s => s.type === "SUBWAY" || s.type === "BUS")
-                .map(s => s.name)
-            : [],
+                ? h.route_detail_json.steps
+                    .filter(s => s.type?.includes("SUBWAY") || s.type?.includes("BUS")) 
+                    .map(s => s.name || (s.type?.includes("SUBWAY") ? "지하철" : "버스"))
+                : [],
+
         total_duration_min: h.duration_minutes || 0,
         transfer_count: h.transfers || 0,
         walking_time_min: h.walking_minutes || 0,
         minutes_left: 0
     };
+
 });
 
     return {
