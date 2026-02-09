@@ -6,15 +6,30 @@ const isProd = process.env.NODE_ENV === 'production'; //http 상태(웹 미배�
 // 30일
 const REFRESH_COOKIE_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
 
-// 쿠키 옵션을 별도로 정의
-const getCookieOptions = () => ({
-  httpOnly: true,
-  secure: true, // 프로덕션에서는 항상 true
-  sameSite: 'none', // 크로스 도메인을 위해 'none'으로 설정
-  maxAge: REFRESH_COOKIE_MAX_AGE,
-  domain: isProd ? '.makcha.store' : undefined, // 서브도메인 간 공유
-  path: '/',
-});
+//  환경별로 다른 쿠키 옵션
+const getCookieOptions = () => {
+  if (isProd) {
+    // 운영: HTTPS + 크로스 도메인
+    return {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      maxAge: REFRESH_COOKIE_MAX_AGE,
+      domain: '.makcha.store', // 서브도메인 공유
+      path: '/',
+    };
+  } else {
+    // 로컬: HTTP + 같은 도메인
+    return {
+      httpOnly: true,
+      secure: false,  // HTTP 허용
+      sameSite: 'lax', //  로컬 lax
+      maxAge: REFRESH_COOKIE_MAX_AGE,
+      // domain 설정 안 함 (localhost 자동)
+      path: '/',
+    };
+  }
+};
 
 //POST /auth/kakao 카카오 로그인 컨트롤러
 const kakaoLogin = async (req, res, next) => {
