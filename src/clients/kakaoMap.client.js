@@ -4,7 +4,7 @@ import { kakaoConfig } from '../config/kakao.config.js';
 class KakaoMapClient {
   constructor() {
     this.config = kakaoConfig;
-    this.placeCache = new Map();  // ⭐ 캐시 추가
+    this.placeCache = new Map();  
     this.axiosInstance = axios.create({
       timeout: this.config.timeout,
       headers: {
@@ -15,7 +15,7 @@ class KakaoMapClient {
 
   async getPlaceDetail(placeId) {
     try {
-      // ⭐ 캐시에서 먼저 확인
+      // 캐시에서 먼저 확인
       if (this.placeCache.has(placeId)) {
         console.log(`[KakaoMapClient] Cache hit for place ${placeId}`);
         return this.placeCache.get(placeId);
@@ -176,6 +176,9 @@ class KakaoMapClient {
         return true;
       })
       .map(place => {
+        // isOpen24Hours 판단 로직 개선
+        const isOpen24Hours = this._detect24Hours(place.place_name, category);
+        
         const normalized = {
           id: place.id,
           name: place.place_name,
@@ -187,11 +190,14 @@ class KakaoMapClient {
           phoneNumber: place.phone || null,
           placeUrl: place.place_url,
           distance: parseInt(place.distance),
-          isOpen24Hours: this._detect24Hours(place.place_name),
+          isOpen24Hours: isOpen24Hours,  // 개선된 로직 사용
           source: 'kakao'
         };
         
-        // ⭐ 캐시에 저장
+        // 디버깅 로그 추가
+        console.log('[DEBUG] Place:', place.place_name, 'Category:', category, 'isOpen24Hours:', isOpen24Hours);
+        
+        // 캐시에 저장
         this.placeCache.set(place.id, normalized);
         
         return normalized;
@@ -208,6 +214,9 @@ class KakaoMapClient {
 
   _normalizeKeywordResults(data) {
     const places = data.documents.map(place => {
+      // 🔧 수정: 키워드 검색도 isOpen24Hours 판단 개선
+      const isOpen24Hours = this._detect24Hours(place.place_name, null);
+      
       const normalized = {
         id: place.id,
         name: place.place_name,
@@ -218,11 +227,11 @@ class KakaoMapClient {
         phoneNumber: place.phone || null,
         placeUrl: place.place_url,
         distance: parseInt(place.distance),
-        isOpen24Hours: this._detect24Hours(place.place_name),
+        isOpen24Hours: isOpen24Hours,  // 개선된 로직 사용
         source: 'kakao'
       };
       
-      // ⭐ 캐시에 저장
+      // 캐시에 저장
       this.placeCache.set(place.id, normalized);
       
       return normalized;
@@ -256,11 +265,32 @@ class KakaoMapClient {
     };
   }
 
-  _detect24Hours(placeName) {
+  /**
+   * 🔧 수정: 24시간 영업 감지 로직 개선
+   * @param {string} placeName - 장소명
+   * @param {string} category - 카테고리 ('PC_ROOM', 'SAUNA', 'CAFE' 등)
+   * @returns {boolean} 24시간 영업 여부
+   */
+  _detect24Hours(placeName, category) {
     const name = placeName.toLowerCase();
-    return name.includes('24') || 
-           name.includes('24시간') || 
-           name.includes('24hour');
+    
+    // 1. 장소명에 24시간 키워드가 있으면 true
+    if (name.includes('24') || 
+        name.includes('24시간') || 
+        name.includes('24hour') ||
+        name.includes('이십사시간')) {
+      return true;
+    }
+    
+    // 2. PC방과 사우나는 대부분 24시간 영업
+    // (추후 실제 운영시간 데이터로 교체 필요)
+    if (category === 'PC_ROOM' || category === 'SAUNA') {
+      console.log(`[DEBUG] Category ${category} detected as 24hours for ${placeName}`);
+      return true;
+    }
+    
+    // 3. 그 외는 false
+    return false;
   }
 
   _handleError(error, defaultCode) {
