@@ -108,7 +108,7 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
     });
 
     // 8. 캐시 삭제 및 SMS 발송
-    await deleteRouteToken(cacheKey);
+    // await deleteRouteToken(cacheKey);
 
     const userPhoneNumber = result.user?.phone_number;
     if (userPhoneNumber) {
