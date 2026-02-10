@@ -110,3 +110,19 @@ export const getNotificationHistoryView = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getDetail = async (req, res, next) => {
+    try {
+        const { notification_id } = req.params;
+        const result = await notiService.getNotificationDetail(notification_id);
+        
+        res.status(200).json({
+            successCode: "NOTI-200-006",
+            statusCode: 200,
+            message: "알림 상세 경로 조회에 성공하였습니다.",
+            result
+        });
+    } catch (error) {
+        next(error);
+    }
+};

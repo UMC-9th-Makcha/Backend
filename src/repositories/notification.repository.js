@@ -209,3 +209,14 @@ export const upsertStation = async (stationId, stationName, latitude = null, lon
     });
 };
 
+
+export const getNotificationWithRoute = async (notificationId) => {
+    return await prisma.notificationTrigger.findUnique({
+        where: { notification_id: BigInt(notificationId) },
+        include: {
+            routeSearch: true,
+            station: true 
+        }
+    });
+};
+

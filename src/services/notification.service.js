@@ -421,3 +421,38 @@ export const getFullNotificationPageData = async (user_id) => {
         history: formattedHistory 
     };
 };
+
+export const getNotificationDetail = async (notification_id) => {
+    const noti = await notiRepo.getNotificationWithRoute(notification_id);
+
+    if (!noti || !noti.routeSearch) {
+        throw new CustomError(
+            "NOTI-404-001",
+            "해당 알림의 상세 경로 정보를 찾을 수 없습니다. ",
+            `/api/alerts/${notification_id}/detail`
+        );
+    }
+
+    const rs = noti.routeSearch;
+    const snapshot = rs.route_data || {};
+    const card = snapshot.card || {};
+
+    // 프론트 요청대로 데이터 매핑
+    return {
+        is_optimal: rs.is_optimal || snapshot.is_optimal || false,
+        lines: snapshot.detail?.steps
+            ? snapshot.detail.steps
+                .filter(s => s.type?.includes("SUBWAY") || s.type?.includes("BUS"))
+                .map(s => (s.subway_lines && s.subway_lines[0]) || s.bus_numbers?.[0] || s.name)
+            : [],
+        total_duration_min: card.traveled_time || 0,
+        transfer_count: card.transfer_count || 0,
+        walking_time_min: card.walk_time || 0,
+        minutes_left: Math.max(0, Math.floor((new Date(noti.scheduled) - new Date()) / 60000)),
+        departure_at: noti.scheduled, // 예약된 막차 출발 시간
+        arrival_at: new Date(new Date(noti.scheduled).getTime() + (card.traveled_time || 0) * 60000), // 출발+소요시간
+        
+        // 캐시된 snapshot 데이터 그대로 전달
+        steps: snapshot.detail?.steps || [] 
+    };
+};
