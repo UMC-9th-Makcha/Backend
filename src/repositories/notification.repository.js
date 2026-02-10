@@ -220,3 +220,14 @@ export const getNotificationWithRoute = async (notificationId) => {
     });
 };
 
+export const getHistoryWithRoute = async (id) => {
+    return await prisma.notificationHistory.findUnique({
+        where: { notification_history_id: BigInt(id) },
+        include: {
+            routeSearch: true,
+            station: true 
+        }
+    });
+};
+
+

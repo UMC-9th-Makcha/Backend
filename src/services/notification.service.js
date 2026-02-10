@@ -98,14 +98,41 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
     });
 
     // 7. 최근 목적지 기록
+    const destinationTitle =
+        destination?.name
+        || destination?.title
+        || snapshot.card?.destination_name
+        || snapshot.card?.title
+        || snapshot.detail?.steps?.slice(-1)[0]?.to?.name
+        || "알 수 없는 목적지";
+
+    const destinationAddress =
+        destination?.address
+        || destination?.road_address
+        || snapshot.card?.destination_address
+        || snapshot.card?.address
+        || snapshot.detail?.steps?.slice(-1)[0]?.to?.address
+        || "주소 정보 없음";
+
     await recordRecentDestination({
         userId,
-        placeId: String(destination.id || destination.placeId || `P${Date.now()}`),
-        title: destination.name || destination.title || "알 수 없는 목적지",
-        roadAddress: destination.address || destination.road_address || "주소 정보 없음",
-        latitude: destination.lat,
-        longitude: destination.lng
+        placeId: String(
+            destination?.id
+            || destination?.placeId
+            || snapshot.card?.destination_id
+            || `P${Date.now()}`
+        ),
+        title: destinationTitle,
+        roadAddress: destinationAddress,
+        latitude: destination?.lat ?? snapshot.detail?.steps?.slice(-1)[0]?.to?.lat,
+        longitude: destination?.lng ?? snapshot.detail?.steps?.slice(-1)[0]?.to?.lng
     });
+
+    console.log("🧭 recent destination source:", {
+    destination,
+    card: snapshot.card,
+    lastStep: snapshot.detail?.steps?.slice(-1)[0]
+});
 
     // 8. 캐시 삭제 및 SMS 발송
     // await deleteRouteToken(cacheKey);
@@ -120,7 +147,7 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
 }
 
     return result;
-}
+};
 
 const getBitByTime = (min) => {
     if(min === 1) return 1;
@@ -453,6 +480,45 @@ export const getNotificationDetail = async (notification_id) => {
         arrival_at: new Date(new Date(noti.scheduled).getTime() + (card.traveled_time || 0) * 60000), // 출발+소요시간
 
         route_id: rs?.route_id ? String(rs.route_id) : (noti.route_search_id ? String(noti.route_search_id) : null),
+        route_token: rs?.route_token || null,
+        
+        // 캐시된 snapshot 데이터 그대로 전달
+        steps: snapshot.detail?.steps || [] 
+    };
+};
+
+
+export const getHistoryDetail = async (notification_history_id) => {
+    const history = await notiRepo.getNotificationWithRoute(notification_history_id);
+
+    if (!history || !history.routeSearch) {
+        throw new CustomError(
+            "NOTI-404-001",
+            "해당 알림의 상세 경로 정보를 찾을 수 없습니다. ",
+            `/api/alerts/${notification_history_id}/detail`
+        );
+    }
+
+    const rs = history.routeSearch;
+    const snapshot = rs.route_data || {};
+    const card = snapshot.card || {};
+
+    // 프론트 요청대로 데이터 매핑
+    return {
+        is_optimal: rs.is_optimal || snapshot.is_optimal || false,
+        lines: snapshot.detail?.steps
+            ? snapshot.detail.steps
+                .filter(s => s.type?.includes("SUBWAY") || s.type?.includes("BUS"))
+                .map(s => (s.subway_lines && s.subway_lines[0]) || s.bus_numbers?.[0] || s.name)
+            : [],
+        total_duration_min: card.traveled_time || 0,
+        transfer_count: card.transfer_count || 0,
+        walking_time_min: card.walk_time || 0,
+        minutes_left: Math.max(0, Math.floor((new Date(history.scheduled) - new Date()) / 60000)),
+        departure_at: history.scheduled, // 예약된 막차 출발 시간
+        arrival_at: new Date(new Date(history.scheduled).getTime() + (card.traveled_time || 0) * 60000), // 출발+소요시간
+
+        route_id: rs?.route_id ? String(rs.route_id) : (history.route_search_id ? String(noti.route_search_id) : null),
         route_token: rs?.route_token || null,
         
         // 캐시된 snapshot 데이터 그대로 전달

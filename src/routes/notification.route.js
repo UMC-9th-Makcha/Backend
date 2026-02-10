@@ -193,6 +193,7 @@ router.patch("/settings", isLoggedIn, notiController.updateSettings);
 // 과거 알림 내역 조회
 router.get("/history", isLoggedIn, notiController.getNotificationHistoryView);
 
+router.get("/history/:notification_history_id/detail", isLoggedIn, notiController.getHistoryDetail);
 /**
  * @swagger
  * /api/alerts/{notification_id}/detail:
@@ -223,6 +224,7 @@ router.get("/history", isLoggedIn, notiController.getNotificationHistoryView);
  *         description: 경로 정보 없음
  */
 // 상세 조회 
-router.get("/:notification_id/detail", isLoggedIn, notiController.getDetail);
+router.get("/:notification_id/detail", isLoggedIn, notiController.getNotiDetail);
+
 
 export default router;
