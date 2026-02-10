@@ -177,6 +177,7 @@ model NotificationTrigger {
   sent_success    Boolean
   sent_at         DateTime?
   scheduled       DateTime?
+  destination_snapshot Json?
 
   user        User         @relation(fields: [user_id], references: [user_id])
   station     Station      @relation(fields: [station_id], references: [station_id])

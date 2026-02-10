@@ -235,13 +235,17 @@ export const checkAndSendNotifications = async () => {
             // 마이페이지에서 설정한 경우 (커스텀모드)
             const userSetting = noti.user.notificationSettings;
 
-            if (userSetting && userSetting.enabled && userSetting.notify_mask > 0) {
-                const currentBit = getBitByTime(diffMin);
-                if (currentBit > 0 && (userSetting.notify_mask & currentBit) !== 0) {
-                    // 도달하는 '분'에 보냈는지 체크
-                    if (noti.last_sent_min != diffMin) {
-                        message = `막차 출발 ${diffMin}분 전입니다.`;
+            if (userSetting && userSetting.enabled) {
+                // 설정된 시간 리스트 (예: [30, 10, 3])
+                const timeList = bitToTimeList(userSetting.notify_mask);
+                
+                for (const targetMin of timeList) {
+                    // 현재 시간이 설정값보다 작거나 같고, 아직 이 타임에 안 보냈다면
+                    if (diffMin <= targetMin && diffMin > targetMin - 1 && noti.last_sent_min !== targetMin) {
+                        message = `막차 출발 ${targetMin}분 전입니다.`;
                         shouldUpdateStatus = true;
+                        nextTrigger = noti.trigger_time; // 커스텀 모드에선 트리거 순서 무의미하므로 유지
+                        break;
                     }
                 }
             }
@@ -296,13 +300,31 @@ export const checkAndSendNotifications = async () => {
                 //최종 발송 완료인 경우 History에 기록 남기기
                 if (nextTrigger === null || message.includes("실시간")) {
                     try {
+                        const rs = noti.route_search; // route_search 조인 데이터
+                        const snapshot = rs?.route_data || {};
+                        const card = snapshot.card || {};
+
                         await notiRepo.createHistory({
                             user_id: noti.user_id,
                             notification_id: noti.notification_id,
                             route_id: noti.route_id,
-                            scheduled: noti.scheduled,
-                            origin_name: noti.station?.station_name,
-                            destination_name: noti.title
+                            
+                            // 1. 역/장소 이름들
+                            origin_name: noti.station?.station_name || "알 수 없음",
+                            destination_name: noti.title || "알 수 없는 목적지",
+                            
+                            // 2. 시간 관련 (Prisma 스키마의 departure_datetime 등)
+                            scheduled: noti.scheduled, // 출발 시간
+                            arrival_datetime: new Date(new Date(noti.scheduled).getTime() + (card.traveled_time || 0) * 60000), // 출발 + 소요시간
+                            duration_minutes: card.traveled_time || 0,
+                            
+                            // 3. 경로 상세 데이터 (JSON 스냅샷)
+                            route_detail_json: snapshot.detail || null,
+                            transfers: card.transfer_count || 0,
+                            walking_minutes: card.walk_time || 0,
+                            
+                            // 4. 절약 금액
+                            saved_fare_won: snapshot.taxi_fare || 0 
                         });
 
                 // 세이브리포트 집계 갱신
@@ -495,7 +517,7 @@ export const getHistoryDetail = async (notification_history_id) => {
         throw new CustomError(
             "NOTI-404-001",
             "해당 알림의 상세 경로 정보를 찾을 수 없습니다. ",
-            `/api/alerts/${notification_history_id}/detail`
+            `/api/alerts/history/${notification_history_id}/detail`
         );
     }
 
@@ -518,10 +540,85 @@ export const getHistoryDetail = async (notification_history_id) => {
         departure_at: history.scheduled, // 예약된 막차 출발 시간
         arrival_at: new Date(new Date(history.scheduled).getTime() + (card.traveled_time || 0) * 60000), // 출발+소요시간
 
-        route_id: rs?.route_id ? String(rs.route_id) : (history.route_search_id ? String(noti.route_search_id) : null),
+        route_id: rs?.route_id ? String(rs.route_id) : (history.route_search_id ? String(history.route_search_id) : null),
         route_token: rs?.route_token || null,
         
         // 캐시된 snapshot 데이터 그대로 전달
         steps: snapshot.detail?.steps || [] 
     };
+};
+
+// 알림 강제 완료 처리 (테스트용)
+export const forceCompleteNotification = async (notification_id, user_id) => {
+    const noti = await notiRepo.getNotificationWithRoute(notification_id);
+
+    if (!noti) {
+        throw new CustomError(
+            "NOTI-404-001", 
+            "알림 정보를 찾을 수 없습니다.", 
+            "/api/alerts/force-complete");
+    }
+
+    // 본인 확인
+    if (String(noti.user_id) !== String(user_id)) {
+        throw new CustomError(
+            "AUTH-403-001", 
+            "본인의 알림만 완료 처리할 수 있습니다.", 
+            "/api/alerts/force-complete");
+    }
+
+    try {
+        // 1. 즉시 완료 문자 발송
+        const userPhone = noti.user?.phone_number;
+        const message = "[테스트] 막차 탑승 성공! 알림이 강제 완료되었습니다.";
+        if (userPhone) {
+            await sendSMS(userPhone, message);
+        }
+
+        // 2. 상태 업데이트 (sent_success: true, trigger_time: null)
+        await notiRepo.updateSentStatus(notification_id, {
+            trigger_time: 'SENT_NOW',
+            sent_success: true,
+            sent_at: new Date()
+        });
+
+        const rs = noti.routeSearch; // Prisma include로 가져온 경로 정보
+        const snapshot = rs?.route_data || {};
+        const card = snapshot.card || {};
+
+        // 3. 히스토리 기록 생성
+        await notiRepo.createHistory({
+            user_id: noti.user_id,
+            notification_id: noti.notification_id,
+            route_id: noti.route_id,
+
+            // 1. 역/장소 명칭 및 ID
+            origin_name: noti.station?.station_name || "알 수 없음",
+            origin_station_id: noti.station_id,
+            destination_name: noti.title || "알 수 없는 목적지",
+
+            // 2. 시간 및 소요 시간 계산
+            scheduled: noti.scheduled, // 출발 시간 (departure_datetime)
+            arrival_datetime: new Date(new Date(noti.scheduled).getTime() + (card.traveled_time || 0) * 60000), // 출발+소요시간
+            duration_minutes: card.traveled_time || 0,
+
+            // 3. 상세 경로 및 통계 데이터 (지연님이 쓸 것들)
+            route_detail_json: snapshot.detail || null, // steps 정보가 든 JSON
+            transfers: card.transfer_count || 0,
+            walking_minutes: card.walk_time || 0,
+            
+            // 4. 세이브 리포트용 금액
+            saved_fare_won: snapshot.taxi_fare || 0 
+        });
+
+        // 4. 세이브 리포트 갱신
+        const monthStr = new Date(noti.scheduled).toISOString().slice(0, 7);
+        const savedFare = noti.routeSearch?.route_data?.taxi_fare || 0;
+        await notiRepo.upsertSaveReport(noti.user_id, monthStr, savedFare);
+
+        return { success: true, message: "강제 완료 처리 성공" };
+    } catch (error) {
+        console.error("강제 완료 중 오류:", error);
+        throw error;
+    }
 };

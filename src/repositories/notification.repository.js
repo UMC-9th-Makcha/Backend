@@ -115,16 +115,22 @@ export const updateSettings = async (user_id, updateData) => {
 export const createHistory = async (notiData) => {
     return await prisma.notificationHistory.create({
         data: {
-            user_id: notiData.user_id,
-            notification_trigger_id: notiData.notification_id,
-            route_search_id: notiData.route_id,
+            user_id: BigInt(notiData.user_id),
+            notification_trigger_id: BigInt(notiData.notification_id),
+            route_search_id: notiData.route_id ? BigInt(notiData.route_id) : null,
 
-            origin_name: notiData.origin_name || "알 수 없음",
-            destination_name: notiData.destination_name || "알 수 없음",
+            origin_name: notiData.origin_name,
+            destination_name: notiData.destination_name,
+            
             departure_datetime: notiData.scheduled,
-            arrival_datetime: new Date(),
-            duration_minutes: 0,
-
+            arrival_datetime: notiData.arrival_datetime,
+            duration_minutes: notiData.duration_minutes,
+            
+            // 💡 JSON 및 추가 정보 저장
+            route_detail_json: notiData.route_detail_json,
+            transfers: notiData.transfers,
+            walking_minutes: notiData.walking_minutes,
+            saved_fare_won: notiData.saved_fare_won
         }
     });
 };
@@ -229,5 +235,4 @@ export const getHistoryWithRoute = async (id) => {
         }
     });
 };
-
 
