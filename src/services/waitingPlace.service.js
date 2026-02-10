@@ -147,11 +147,16 @@ class WaitingPlaceService {
         
       const MAX_DISTANCE = 5000; //반경 5km
 
-      // 정렬 로직 적용
+      // 🔧 수정: 정렬 로직 적용
       const sortedPlaces = this._sortPlaces(
         filteredPlaces.filter(p => p.distance <= MAX_DISTANCE),
         sort
       ).slice(0, limit);
+
+      // 디버깅 로그 추가
+      console.log('[DEBUG] sort 파라미터:', sort);
+      console.log('[DEBUG] 정렬 전 거리:', filteredPlaces.slice(0, 5).map(p => ({ name: p.name, distance: p.distance, isOpen24Hours: p.isOpen24Hours })));
+      console.log('[DEBUG] 정렬 후 거리:', sortedPlaces.slice(0, 5).map(p => ({ name: p.name, distance: p.distance, isOpen24Hours: p.isOpen24Hours })));
 
       // 장소가 없는 경우 - 에러 대신 빈 배열 반환
       if (sortedPlaces.length === 0) {
@@ -250,6 +255,11 @@ class WaitingPlaceService {
           place.lng
         );
       }
+
+      // 디버깅 로그 추가
+      console.log('[DEBUG] getPlaceDetail - isOpen24Hours:', place.isOpen24Hours);
+      console.log('[DEBUG] getPlaceDetail - place name:', place.name);
+      console.log('[DEBUG] getPlaceDetail - category:', place.category);
 
       // 성공 시 데이터만 반환 
       return {
@@ -464,16 +474,19 @@ class WaitingPlaceService {
   }
 
   /**
-   * 정렬 로직
+   * 🔧 수정: 정렬 로직
    * @param {Array} places - 정렬할 장소 목록
    * @param {string} sortOption - 정렬 옵션 ('distance' 또는 '24hour')
    * @returns {Array} 정렬된 장소 목록
    */
   _sortPlaces(places, sortOption) {
+    // 원본 배열을 복사한 후 정렬 (불변성 유지)
+    const sorted = [...places];
+    
     switch (sortOption) {
       case '24hour':
         // 24시간 영업소 우선, 그 다음 거리순
-        return places.sort((a, b) => {
+        return sorted.sort((a, b) => {
           // 24시간 영업 여부로 먼저 정렬
           if (a.isOpen24Hours && !b.isOpen24Hours) return -1;
           if (!a.isOpen24Hours && b.isOpen24Hours) return 1;
@@ -484,7 +497,7 @@ class WaitingPlaceService {
       case 'distance':
       default:
         // 거리순 정렬 (기본값)
-        return places.sort((a, b) => a.distance - b.distance);
+        return sorted.sort((a, b) => a.distance - b.distance);
     }
   }
 }
