@@ -451,6 +451,9 @@ export const getNotificationDetail = async (notification_id) => {
         minutes_left: Math.max(0, Math.floor((new Date(noti.scheduled) - new Date()) / 60000)),
         departure_at: noti.scheduled, // 예약된 막차 출발 시간
         arrival_at: new Date(new Date(noti.scheduled).getTime() + (card.traveled_time || 0) * 60000), // 출발+소요시간
+
+        route_id: rs?.route_id ? String(rs.route_id) : (noti.route_search_id ? String(noti.route_search_id) : null),
+        route_token: rs?.route_token || null,
         
         // 캐시된 snapshot 데이터 그대로 전달
         steps: snapshot.detail?.steps || [] 
