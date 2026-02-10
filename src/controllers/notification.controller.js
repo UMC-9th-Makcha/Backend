@@ -142,3 +142,14 @@ export const getHistoryDetail = async (req, res, next) => {
         next(error);
     }
 };
+
+//임시 테스트용
+export const forceComplete = async (req, res, next) => {
+    try {
+        const { notification_id } = req.params;
+        const result = await notiService.forceCompleteNotification(notification_id, req.user.userId);
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
