@@ -126,7 +126,12 @@ class WaitingPlaceService {
           });
           
           keyword24h.places.forEach(place => {
-            if (!allPlaces.find(p => p.id === place.id)) {
+            // category 파라미터가 있으면 해당 카테고리만 추가
+            const shouldAdd = category 
+              ? place.category === category  // category 있으면 필터링
+              : true;  // category 없으면 전부 추가
+            
+            if (shouldAdd && !allPlaces.find(p => p.id === place.id)) {
               allPlaces.push(place);
             }
           });
@@ -147,7 +152,7 @@ class WaitingPlaceService {
         
       const MAX_DISTANCE = 5000; //반경 5km
 
-      // 🔧 수정: 정렬 로직 적용
+      // 정렬 로직 적용
       const sortedPlaces = this._sortPlaces(
         filteredPlaces.filter(p => p.distance <= MAX_DISTANCE),
         sort
