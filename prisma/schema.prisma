@@ -178,12 +178,18 @@ model NotificationTrigger {
   sent_at         DateTime?
   scheduled       DateTime?
   destination_snapshot Json?  
+  title           String?
+  road_address    String?
+  latitude        Float?
+  longitude       Float?
 
   user        User         @relation(fields: [user_id], references: [user_id])
   station     Station      @relation(fields: [station_id], references: [station_id])
   routeSearch RouteSearch? @relation(fields: [route_id], references: [route_id])
 
   notificationHistories NotificationHistory[]
+
+  @@map("NotificationTrigger")
 }
 
 model UserNotificationSetting {

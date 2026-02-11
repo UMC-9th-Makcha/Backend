@@ -18,10 +18,15 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
     }
 
     const { snapshot } = cachedData;
+    const origin = snapshot.origin;
+    const snapDest = snapshot.destination;
 
-    const destination = snapshot.destination;
     const stationIdFromCache = snapshot.station_id
-    const stationName = snapshot.origin.name || snapshot.detail?.steps[1]?.from?.name || "알 수 없는 역";
+    const stationName = 
+        origin.title || 
+        origin.name || 
+        snapshot.detail?.steps[1]?.from?.name || 
+        "알 수 없는 역";
     const lat = snapshot.origin.lat; // 위도
     const lng = snapshot.origin.lng; // 경도
 
@@ -88,55 +93,36 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
         phone_number: user.phone_number,
         station_id: stationIdFromCache,
         route_id: routeSearchRecord.route_id,
-        title: destination.name,
-        latitude: destination.lat,
-        longitude: destination.lng,
-        road_address: destination.address,
+
+        title: snapDest.title || snapDest.name || snapshot.card?.destination_name || "알 수 없는 목적지",
+        latitude: snapDest.lat,
+        longitude: snapDest.lng,
+        road_address: snapDest.roadAddress || snapDest.address || "주소 정보 없음",
+        detail_address: snapDest.detailAddress || "상세 주소 정보 없음",
+
         scheduled: scheduledTime,
         trigger_time: initTrigger,
         alert_time: alert_time 
     });
 
     // 7. 최근 목적지 기록
-    const destinationTitle =
-        destination?.name
-        || destination?.title
-        || snapshot.card?.destination_name
-        || snapshot.card?.title
-        || snapshot.detail?.steps?.slice(-1)[0]?.to?.name
-        || "알 수 없는 목적지";
-
-    const destinationAddress =
-        destination?.address
-        || destination?.road_address
-        || snapshot.card?.destination_address
-        || snapshot.card?.address
-        || snapshot.detail?.steps?.slice(-1)[0]?.to?.address
-        || "주소 정보 없음";
-
     await recordRecentDestination({
         userId,
-        placeId: String(
-            destination?.id
-            || destination?.placeId
-            || snapshot.card?.destination_id
-            || `P${Date.now()}`
-        ),
-        title: destinationTitle,
-        roadAddress: destinationAddress,
-        latitude: destination?.lat ?? snapshot.detail?.steps?.slice(-1)[0]?.to?.lat,
-        longitude: destination?.lng ?? snapshot.detail?.steps?.slice(-1)[0]?.to?.lng
+        placeId: String(snapDest.id || snapDest.placeId || `P${Date.now()}`),
+        title: snapDest.title || snapDest.name || "알 수 없는 목적지",
+        roadAddress: snapDest.roadAddress || snapDest.address || "주소 정보 없음",
+        detailAddress: snapDest.detailAddress || null, 
+        latitude: snapDest.lat,
+        longitude: snapDest.lng
     });
 
     console.log("🧭 recent destination source:", {
-    destination,
+    destination: snapDest,
     card: snapshot.card,
     lastStep: snapshot.detail?.steps?.slice(-1)[0]
 });
 
     // 8. 캐시 삭제 및 SMS 발송
-    // await deleteRouteToken(cacheKey);
-
     const userPhoneNumber = result.user?.phone_number;
     if (userPhoneNumber) {
     try {
@@ -393,7 +379,6 @@ export const getFullNotificationPageData = async (user_id) => {
         const snapshot = rs?.route_data || {};
 
         const scheduledTime = new Date(activeTrigger.scheduled);
-        const diffMs = scheduledTime - new Date();
 
         currentAlertData = {
             id: String(activeTrigger.notification_id),
@@ -443,6 +428,7 @@ export const getFullNotificationPageData = async (user_id) => {
 
     return {
         id: String(h.notification_history_id),
+        notification_id: h.notification_trigger_id ? String(h.notification_trigger_id) : null,
         origin: h.origin_name,
         destination: h.destination_name,
         departure_time: h.departure_datetime,
