@@ -379,7 +379,6 @@ export const getFullNotificationPageData = async (user_id) => {
         const snapshot = rs?.route_data || {};
 
         const scheduledTime = new Date(activeTrigger.scheduled);
-        const diffMs = scheduledTime - new Date();
 
         currentAlertData = {
             id: String(activeTrigger.notification_id),
@@ -429,7 +428,7 @@ export const getFullNotificationPageData = async (user_id) => {
 
     return {
         id: String(h.notification_history_id),
-        notification_id: h.notification_id ? String(h.notification_id) : null,
+        notification_id: h.notification_trigger_id ? String(h.notification_trigger_id) : null,
         origin: h.origin_name,
         destination: h.destination_name,
         departure_time: h.departure_datetime,
