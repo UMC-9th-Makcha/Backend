@@ -21,6 +21,12 @@ export const addNotification = async (data) => {
                 phone_number: data.phone_number,
                 trigger_time: data.trigger_time, // TriggerTime 열거형 값
                 sent_success: false,
+
+                // 목적지 정보 저장
+                title: data.title,
+                latitude: data.latitude,
+                longitude: data.longitude,
+                road_address: data.road_address,
                 
                 // 날짜 데이터 처리
                 sent_at: (data.sent_at && !isNaN(new Date(data.sent_at))) 
@@ -120,6 +126,7 @@ export const createHistory = async (notiData) => {
             route_search_id: notiData.route_id ? BigInt(notiData.route_id) : null,
 
             origin_name: notiData.origin_name,
+            origin_station_id: notiData.origin_station_id ? BigInt(notiData.origin_station_id) : null,
             destination_name: notiData.destination_name,
             
             departure_datetime: notiData.scheduled,
