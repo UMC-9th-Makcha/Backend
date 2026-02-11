@@ -52,8 +52,20 @@ export async function postRouteCandidates(req, res, next) {
     }
 
     const candidates = await getRouteCandidates({
-      origin: { lat: originLat, lng: originLng },
-      destination: { lat: destLat, lng: destLng },
+      origin: {
+        lat: originLat,
+        lng: originLng,
+        title: req.body?.origin?.title ?? null,
+        roadAddress: req.body?.origin?.roadAddress ?? null,
+        detailAddress: req.body?.origin?.detailAddress ?? null,
+      },
+      destination: {
+        lat: destLat,
+        lng: destLng,
+        title: req.body?.destination?.title ?? null,
+        roadAddress: req.body?.destination?.roadAddress ?? null,
+        detailAddress: req.body?.destination?.detailAddress ?? null,
+      },
     });
 
     return res.status(200).json(

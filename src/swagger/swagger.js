@@ -385,6 +385,21 @@ const options = {
               properties: {
                 lat: { type: "number", example: 37.6175836 },
                 lng: { type: "number", example: 127.0760294 },
+                title: {
+                  type: "string",
+                  nullable: true,
+                  example: "태릉입구역",
+                },
+                roadAddress: {
+                  type: "string",
+                  nullable: true,
+                  example: "서울 노원구 공릉동 678",
+                },
+                detailAddress: {
+                  type: "string",
+                  nullable: true,
+                  example: "7번 출구",
+                },
               },
             },
             destination: {
@@ -393,6 +408,21 @@ const options = {
               properties: {
                 lat: { type: "number", example: 37.6260506 },
                 lng: { type: "number", example: 127.0937494 },
+                title: {
+                  type: "string",
+                  nullable: true,
+                  example: "서울여대",
+                },
+                roadAddress: {
+                  type: "string",
+                  nullable: true,
+                  example: "서울 노원구 화랑로 621",
+                },
+                detailAddress: {
+                  type: "string",
+                  nullable: true,
+                  example: "1층",
+                },
               },
             },
           },

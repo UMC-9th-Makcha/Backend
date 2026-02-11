@@ -797,14 +797,30 @@ export async function getRouteCandidates({ origin, destination }) {
     const route_token = generateRouteToken();
     const walkSegments = extractWalkSegments(c.detail);
 
+    const originSnapshot = {
+      lat: origin.lat,
+      lng: origin.lng,
+      title: origin.title ?? null,
+      roadAddress: origin.roadAddress ?? null,
+      detailAddress: origin.detailAddress ?? null,
+    };
+
+    const destinationSnapshot = {
+      lat: destination.lat,
+      lng: destination.lng,
+      title: destination.title ?? null,
+      roadAddress: destination.roadAddress ?? null,
+      detailAddress: destination.detailAddress ?? null,
+    };
+
     await setRouteToken(
       route_token,
       {
         mapObj,
         walkSegments,
         snapshot: {
-          origin,
-          destination,
+          origin: originSnapshot,
+          destination: destinationSnapshot,
           tags: c.tags,
           station_id: c.station_id,
           card: c.card,
@@ -814,22 +830,10 @@ export async function getRouteCandidates({ origin, destination }) {
       30 * 60,
     );
 
-    // setRouteToken(
-    //   route_token,
-    //   {
-    //     mapObj,
-    //     walkSegments,
-    //     snapshot: {
-    //       origin,
-    //       destination,
-    //       tags: c.tags,
-    //       station_id: c.station_id,
-    //       card: c.card,
-    //       detail: c.detail,
-    //     },
-    //   },
-    //   30 * 60,
-    // );
+    console.log("[route_token snapshot]", route_token, {
+      origin: originSnapshot,
+      destination: destinationSnapshot,
+    });
 
     c.route_token = route_token;
     finalPicked.push(c);
@@ -838,5 +842,5 @@ export async function getRouteCandidates({ origin, destination }) {
   markOptimalCandidate(finalPicked);
 
   // meta 제거
-  return picked.map(({ meta, ...rest }) => rest);
+  return finalPicked.map(({ meta, ...rest }) => rest);
 }
