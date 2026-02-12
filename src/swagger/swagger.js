@@ -243,6 +243,16 @@ const options = {
           },
         },
 
+        // CREATE result (PLACE 생성)
+        MyPlaceCreateResult: {
+          $ref: "#/components/schemas/MyPlace",
+        },
+
+        // HOME result
+        HomeResult: {
+          $ref: "#/components/schemas/MyPlace",
+        },
+
         // DELETE result (PLACE 삭제)
         MyPlaceDeleteResult: {
           type: "object",
@@ -262,6 +272,8 @@ const options = {
             },
           },
         },
+
+
 
         // 내 정보 조회 result
         MyInfoResult: {
