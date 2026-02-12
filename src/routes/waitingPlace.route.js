@@ -99,19 +99,19 @@ const router = express.Router();
  *                         type: number
  *                         example: 127.0396
  *                       distance:
-*                         type: number
-*                         description: 현재 위치로부터의 거리 (미터)
-*                         example: 250
-*                       thumbnailUrl:
-*                         type: string
-*                         nullable: true
-*                         description: 장소 카카오맵 링크 (썸네일 대용)
-*                         example: "http://place.map.kakao.com/12345"
-*                       operatingHours:
-*                         type: string
-*                         description: 운영 시간 정보
-*                         example: "24시간 영업"
-*       400:
+ *                         type: number
+ *                         description: 현재 위치로부터의 거리 (미터)
+ *                         example: 250
+ *                       thumbnailUrl:
+ *                         type: string
+ *                         nullable: true
+ *                         description: 장소 카카오맵 링크 (썸네일 대용)
+ *                         example: "http://place.map.kakao.com/12345"
+ *                       operatingHours:
+ *                         type: string
+ *                         description: 운영 시간 정보
+ *                         example: "24시간 영업"
+ *       400:
  *         description: 잘못된 요청
  *         content:
  *           application/json:

@@ -1,16 +1,26 @@
 import { Router } from 'express';
 import RouteController from '../controllers/route.controller.js';
-import RouteService from '../services/route.service.js'; // 서비스도 import 필요
+import RouteService from '../services/route.service.js';
+import KakaoMapClient from '../clients/kakaoMap.client.js';
+import { DistanceUtil } from '../utils/distance.util.js';
 
 const router = Router();
 
-// 👇 서비스와 컨트롤러 인스턴스 생성
-const routeService = new RouteService();
+// 의존성 주입: KakaoMapClient, DistanceUtil 생성 후 RouteService에 전달
+const kakaoClient = new KakaoMapClient();
+const distanceUtil = new DistanceUtil();
+
+// 디버깅: distanceUtil이 제대로 생성되었는지 확인
+console.log('🔍 [route.route.js] DistanceUtil:', DistanceUtil);
+console.log('🔍 [route.route.js] distanceUtil instance:', distanceUtil);
+console.log('🔍 [route.route.js] distanceUtil.calculate:', distanceUtil.calculate);
+
+const routeService = new RouteService(kakaoClient, distanceUtil);
 const routeController = new RouteController(routeService);
 
 /**
  * @swagger
- * /route/walking:
+ * /api/route/walking:
  *   post:
  *     summary: 도보 길안내
  *     description: |
@@ -96,7 +106,7 @@ router.post('/walking', (req, res, next) => routeController.getWalkingRoute(req,
 
 /**
  * @swagger
- * /route/navigation:
+ * /api/route/navigation:
  *   post:
  *     summary: 길찾기 경로 안내
  *     description: |

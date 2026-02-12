@@ -16,7 +16,7 @@ const facilityController = new FacilityController(facilityService);
 
 /**
  * @swagger
- * /facilities/search:
+ * /api/facilities/search:
  *   get:
  *     summary: 주변 시설 통합 검색
  *     description: |
@@ -147,7 +147,7 @@ router.get('/search', (req, res, next) => facilityController.searchFacilities(re
 
 /**
  * @swagger
- * /facilities/category/{categoryType}:
+ * /api/facilities/category/{categoryType}:
  *   get:
  *     summary: 카테고리별 시설 검색
  *     description: |
