@@ -1,57 +1,75 @@
+/**
+ * 택시 요금 예상 요청 DTO
+ */
 export class TaxiFareEstimateDto {
-  constructor({ from, to, departureTime }) {
+  constructor(data = {}) {
     this.from = {
-      lat: parseFloat(from?.lat),
-      lng: parseFloat(from?.lng)
+      lat: parseFloat(data.from?.lat),
+      lng: parseFloat(data.from?.lng)
     };
     this.to = {
-      lat: parseFloat(to?.lat),
-      lng: parseFloat(to?.lng)
+      lat: parseFloat(data.to?.lat),
+      lng: parseFloat(data.to?.lng)
     };
-    this.departureTime = departureTime ? new Date(departureTime) : new Date();
+    this.taxiType = data.taxiType || 'REGULAR';
   }
 
+  /**
+   * 유효성 검증
+   * @returns {Array} 에러 배열
+   */
   validate() {
     const errors = [];
 
-    // 출발지 검증
+    // 출발지 위도 검증
     if (!this.from.lat || isNaN(this.from.lat) || this.from.lat < -90 || this.from.lat > 90) {
-      errors.push({ 
-        field: 'from.lat', 
-        message: '출발지 위도가 유효하지 않습니다.' 
+      errors.push({
+        field: 'from.lat',
+        message: '출발지 위도가 유효하지 않습니다.'
       });
     }
 
+    // 출발지 경도 검증
     if (!this.from.lng || isNaN(this.from.lng) || this.from.lng < -180 || this.from.lng > 180) {
-      errors.push({ 
-        field: 'from.lng', 
-        message: '출발지 경도가 유효하지 않습니다.' 
+      errors.push({
+        field: 'from.lng',
+        message: '출발지 경도가 유효하지 않습니다.'
       });
     }
 
-    // 도착지 검증
+    // 도착지 위도 검증
     if (!this.to.lat || isNaN(this.to.lat) || this.to.lat < -90 || this.to.lat > 90) {
-      errors.push({ 
-        field: 'to.lat', 
-        message: '도착지 위도가 유효하지 않습니다.' 
+      errors.push({
+        field: 'to.lat',
+        message: '도착지 위도가 유효하지 않습니다.'
       });
     }
 
+    // 도착지 경도 검증
     if (!this.to.lng || isNaN(this.to.lng) || this.to.lng < -180 || this.to.lng > 180) {
-      errors.push({ 
-        field: 'to.lng', 
-        message: '도착지 경도가 유효하지 않습니다.' 
+      errors.push({
+        field: 'to.lng',
+        message: '도착지 경도가 유효하지 않습니다.'
       });
     }
 
-    // 출발 시간 검증
-    if (isNaN(this.departureTime.getTime())) {
-      errors.push({ 
-        field: 'departureTime', 
-        message: '유효하지 않은 날짜 형식입니다. (ISO 8601 형식 사용)' 
+    // 택시 타입 검증
+    const validTaxiTypes = ['REGULAR', 'DELUXE'];
+    if (this.taxiType && !validTaxiTypes.includes(this.taxiType)) {
+      errors.push({
+        field: 'taxiType',
+        message: `택시 타입은 ${validTaxiTypes.join(', ')} 중 하나여야 합니다.`
       });
     }
 
     return errors;
+  }
+
+  /**
+   * 유효한지 확인
+   * @returns {boolean}
+   */
+  isValid() {
+    return this.validate().length === 0;
   }
 }
