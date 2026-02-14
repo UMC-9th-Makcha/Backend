@@ -2,6 +2,13 @@ export const appConfig = {
   port: process.env.PORT || 3000,
   env: process.env.NODE_ENV || 'development',
   
+  //baseUrl 추가
+  baseUrl:
+    process.env.BASE_URL ||
+    (process.env.NODE_ENV === 'production'
+      ? 'https://api.makcha.store'
+      : 'http://localhost:3000'),
+  
   // 택시 요금 설정 (서울 기준)
   taxiFare: {
     baseFare: 4800,
