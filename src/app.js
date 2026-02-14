@@ -1,3 +1,5 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser"; //쿠키 파싱
@@ -17,6 +19,7 @@ import routeCandidateRouter from "./routes/routeCandidate.route.js";
 import facilityRouter from "./routes/facility.route.js";
 import routeRouter from "./routes/route.route.js";
 import waitingPlaceRouter from "./routes/waitingPlace.route.js";
+import googleRoute from './routes/google.route.js';
 
 // Taxi 관련 import
 import { createTaxiRouter } from "./routes/taxi.route.js";
@@ -87,6 +90,7 @@ app.use("/api/route", routeRouter);
 app.use("/api/routes", routeCandidateRouter);
 app.use("/api/waiting-places", waitingPlaceRouter);
 app.use("/api/taxi", taxiRouter);  // Taxi 라우터 추가
+app.use('/api', googleRoute); //구글 지도 api 추가
 
 // Swagger JSON 직접 노출 (검증용)
 app.get("/api-docs.json", (req, res) => {

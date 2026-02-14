@@ -3,11 +3,14 @@ import WaitingPlaceController from '../controllers/waitingPlace.controller.js';
 import WaitingPlaceService from '../services/waitingPlace.service.js';
 import KakaoMapClient from '../clients/kakaoMap.client.js';
 import { DistanceUtil } from '../utils/distance.util.js';
+import GooglePlacesClient from '../clients/googleClient.js';
+
 
 // 의존성 주입
 const kakaoClient = new KakaoMapClient();
+const googleClient = new GooglePlacesClient(process.env.GOOGLE_PLACES_API_KEY);
 const distanceUtil = new DistanceUtil();
-const waitingPlaceService = new WaitingPlaceService(kakaoClient, distanceUtil, null);  // timeUtil은 실제로 사용 안 함
+const waitingPlaceService = new WaitingPlaceService(kakaoClient,googleClient, distanceUtil, null);  // timeUtil은 실제로 사용 안 함
 const waitingPlaceController = new WaitingPlaceController(waitingPlaceService);
 
 const router = express.Router();
@@ -105,12 +108,16 @@ const router = express.Router();
  *                       thumbnailUrl:
  *                         type: string
  *                         nullable: true
- *                         description: 장소 카카오맵 링크 (썸네일 대용)
- *                         example: "http://place.map.kakao.com/12345"
+ *                         description: 장소 대표 이미지 URL (Google Places 연동)
+ *                         example: "/api/google-photo?ref=places/ChIJxxx/photos/ABC123"
+ *
  *                       operatingHours:
  *                         type: string
- *                         description: 운영 시간 정보
- *                         example: "24시간 영업"
+ *                         nullable: true
+ *                         description: 요일별 영업시간 정보
+ *                         example: |
+ *                           월요일: 08:00–22:00
+ *                           화요일: 08:00–22:00
  *       400:
  *         description: 잘못된 요청
  *         content:

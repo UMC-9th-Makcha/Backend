@@ -1,10 +1,11 @@
 import { WaitingPlaceResponseDto } from '../dtos/response/waitingPlace.dto.js';
-import { appConfig } from '../config/app.config.js';
 import { CustomError } from '../response/customError.js';
+import { appConfig } from '../config/app.config.js';
 
 class WaitingPlaceService {
-  constructor(kakaoClient, distanceUtil, timeUtil) {
+  constructor(kakaoClient, googleClient, distanceUtil, timeUtil) {
     this.kakaoClient = kakaoClient;
+    this.googleClient = googleClient; //추가함(대표 사진, 영업 시간)
     this.distanceUtil = distanceUtil;
     this.timeUtil = timeUtil;
   }
@@ -247,6 +248,12 @@ class WaitingPlaceService {
       }
 
       const currentTime = new Date();
+
+      const googleData = await this.googleClient.findPlaceByLocation({
+        lat: place.lat,
+        lng: place.lng //대표 사진, 영업 시간
+      });
+
       const recommendReason = this._generateRecommendReason(place, currentTime);
       const kakaoMapUrl = this._generateKakaoMapDeepLink(place);
 
@@ -272,9 +279,16 @@ class WaitingPlaceService {
           { 
             ...place, 
             recommendReason,
-            thumbnailUrl: null,  // 카카오 API는 이미지 미제공
-            operatingHours: this._formatOperatingHours(place),  
-            isCurrentlyOpen: this._isCurrentlyOpen(place, currentTime) 
+            //thumbnailUrl: null,  // 카카오 API는 이미지 미제공
+            thumbnailUrl: googleData?.photoReference
+              ? `${appConfig.baseUrl}/api/google-photo?ref=${encodeURIComponent(googleData.photoReference)}`
+              : null,
+            //operatingHours: this._formatOperatingHours(place),
+            operatingHours:
+            googleData?.operatingHours ?? this._formatOperatingHours(place),  
+            isCurrentlyOpen:
+              googleData?.isCurrentlyOpen ?? this._isCurrentlyOpen(place)
+            //isCurrentlyOpen: this._isCurrentlyOpen(place, currentTime) 
           },
           Math.round(distance),  // 0 → 실제 거리
           currentTime
