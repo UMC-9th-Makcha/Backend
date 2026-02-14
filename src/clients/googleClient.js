@@ -30,7 +30,7 @@ class GooglePlacesClient {
               radius
             }
           },
-          maxResultCount: 1,
+          maxResultCount: 5,
           languageCode: 'ko'
         },
         {

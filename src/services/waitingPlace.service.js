@@ -254,6 +254,16 @@ class WaitingPlaceService {
         lng: place.lng //대표 사진, 영업 시간
       });
 
+      // Google 응답 디버깅
+      console.log('================ GOOGLE DEBUG ================');
+      console.log('[GOOGLE RAW DATA]', googleData);
+      console.log('[GOOGLE photoReference]', googleData?.photoReference);
+      console.log('[GOOGLE operatingHours]', googleData?.operatingHours);
+      console.log('[GOOGLE isCurrentlyOpen]', googleData?.isCurrentlyOpen);
+      console.log('==============================================');
+
+      
+
       const recommendReason = this._generateRecommendReason(place, currentTime);
       const kakaoMapUrl = this._generateKakaoMapDeepLink(place);
 
