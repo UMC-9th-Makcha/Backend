@@ -1,6 +1,9 @@
 # Base Image
 FROM node:18-alpine
 
+#Timezone 설정
+RUN apk add --no-cache tzdata
+
 # Working Directory
 WORKDIR /app
 
