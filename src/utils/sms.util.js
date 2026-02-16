@@ -38,7 +38,7 @@ const sendVerificationSMS = async (phoneNumber, code) => {
 
 // 일반 알림용
 export const sendSMS = async (phoneNumber, text) => {
-  await sendMessage(phoneNumber, `[Makcha] ${text}`);
+  await sendVerificationSMS(phoneNumber, text); 
 };
 
-export default { sendVerificationSMS };
+export default { sendVerificationSMS, sendSMS };

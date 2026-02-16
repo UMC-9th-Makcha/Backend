@@ -272,8 +272,11 @@ export const checkAndSendNotifications = async () => {
             if (shouldUpdateStatus && message) {
                 const userPhone = noti.user?.phone_number;
 
+                console.log(`[Notification Send] 🔔 ID: ${noti.notification_id} | User: ${noti.user_id} | Msg: ${message} | Time: ${new Date().toLocaleString()}`);
+
                 if (userPhone) {
                     await sendSMS(userPhone, message);
+                    console.log(`[SMS Success] ✅ To: ${userPhone} | Msg: ${message}`);
                 } else {
                     console.warn(`[SMS skip] 유저번호 없음: ${noti.user_id}`);
                 }
