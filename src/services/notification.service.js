@@ -223,18 +223,23 @@ export const checkAndSendNotifications = async () => {
             const userSetting = noti.user.notificationSettings;
 
             if (userSetting && userSetting.enabled) {
-                // 설정된 시간 리스트 (예: [30, 10, 3])
                 const timeList = bitToTimeList(userSetting.notify_mask) || [];
-                
-                if (timeList.length > 0) {
-                    for (const targetMin of timeList) {
-                        // 현재 시간이 설정값보다 작거나 같고, 아직 이 타임에 안 보냈다면
-                        if (diffMin <= targetMin && diffMin > targetMin - 1 && noti.last_sent_min !== targetMin) {
-                            message = `막차 출발 ${targetMin}분 전입니다.`;
-                            shouldUpdateStatus = true;
-                            nextTrigger = noti.trigger_time; // 커스텀 모드에선 트리거 순서 무의미하므로 유지
-                            break;
+                // 시간을 내림차순 정렬 (30, 10, 3, 1 순서)
+                timeList.sort((a, b) => b - a); 
+                const minTarget = Math.min(...timeList); // 가장 마지막 알림 시간 (예: 1)
+
+                for (const targetMin of timeList) {
+                    if (diffMin <= targetMin && diffMin > targetMin - 1 && noti.last_sent_min !== targetMin) {
+                        message = targetMin === 1 ? "지금 당장 출발하세요!" : `막차 출발 ${targetMin}분 전입니다.`;
+                        shouldUpdateStatus = true;
+
+                        // ✅ 가장 작은 시간(마지막 알림)을 보냈다면 종료 처리!
+                        if (targetMin === minTarget) {
+                            nextTrigger = null; 
+                        } else {
+                            nextTrigger = noti.trigger_time;
                         }
+                        break;
                     }
                 }
             }
@@ -254,13 +259,13 @@ export const checkAndSendNotifications = async () => {
                 } 
                 else if (noti.trigger_time === 'SENT_THREE' && diffMin <= 3) {
                     message = "막차 출발 3분 전입니다.";
-                    nextTrigger = 'SENT_NOW';
+                    nextTrigger = 'SENT_NOW'; 
                     shouldUpdateStatus = true;
-                }
-
+                } 
+                // ✅ 이 부분이 else 블록 안에 정확히 있어야 합니다!
                 else if (noti.trigger_time === 'SENT_NOW' && diffMin <= 1) {
                     message = "지금 당장 출발하세요! 막차가 곧 출발합니다.";
-                    nextTrigger = null; // 알림 종료
+                    nextTrigger = null; 
                     shouldUpdateStatus = true;
                 }
             }
