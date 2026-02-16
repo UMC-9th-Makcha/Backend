@@ -172,21 +172,37 @@ class WaitingPlaceService {
         };
       }
 
-      const enrichedPlaces = sortedPlaces.map(place => {
-        const recommendReason = this._generateRecommendReason(place, currentTime);
-        
-        return new WaitingPlaceResponseDto(
-          { 
-            ...place, 
-            recommendReason,
-            thumbnailUrl: null,  // 카카오 API는 이미지 미제공
-            operatingHours: this._formatOperatingHours(place),  
-            isCurrentlyOpen: this._isCurrentlyOpen(place, currentTime)
-          },
-          place.distance,
-          currentTime
-        );
-      });
+      // Google API 호출 추가 - 목록에서도 사진/영업시간 표시
+      const enrichedPlaces = await Promise.all(
+        sortedPlaces.map(async (place) => {
+          const recommendReason = this._generateRecommendReason(place, currentTime);
+          
+          // Google API로 사진/영업시간 가져오기
+          let googleData = null;
+          try {
+            googleData = await this.googleClient.findPlaceByLocation({
+              lat: place.lat,
+              lng: place.lng
+            });
+          } catch (error) {
+            console.warn(`[Google] Failed for ${place.name}:`, error.message);
+          }
+          
+          return new WaitingPlaceResponseDto(
+            { 
+              ...place, 
+              recommendReason,
+              thumbnailUrl: googleData?.photoReference
+                ? `${appConfig.baseUrl}/api/google-photo?ref=${encodeURIComponent(googleData.photoReference)}`
+                : null,
+              operatingHours: googleData?.operatingHours ?? this._formatOperatingHours(place),
+              isCurrentlyOpen: googleData?.isCurrentlyOpen ?? this._isCurrentlyOpen(place, currentTime)
+            },
+            place.distance,
+            currentTime
+          );
+        })
+      );
 
       // 성공 시 데이터만 반환
       return {
