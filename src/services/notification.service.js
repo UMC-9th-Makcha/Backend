@@ -224,21 +224,26 @@ export const checkAndSendNotifications = async () => {
 
             if (userSetting && userSetting.enabled) {
                 const timeList = bitToTimeList(userSetting.notify_mask) || [];
-                // 시간을 내림차순 정렬 (30, 10, 3, 1 순서)
                 timeList.sort((a, b) => b - a); 
-                const minTarget = Math.min(...timeList); // 가장 마지막 알림 시간 (예: 1)
+                const minTarget = Math.min(...timeList); 
 
                 for (const targetMin of timeList) {
+                    // ✅ 조건 보강: diffMin이 해당 구간에 들어왔고 + '방금 보낸 시간'이 아닐 때만 발송
                     if (diffMin <= targetMin && diffMin > targetMin - 1 && noti.last_sent_min !== targetMin) {
                         message = targetMin === 1 ? "지금 당장 출발하세요!" : `막차 출발 ${targetMin}분 전입니다.`;
                         shouldUpdateStatus = true;
 
-                        // ✅ 가장 작은 시간(마지막 알림)을 보냈다면 종료 처리!
+                        // ✅ 현재 보낸 분(min)을 기록해서 중복 발송 방지
+                        const currentSentMin = targetMin; 
+
                         if (targetMin === minTarget) {
                             nextTrigger = null; 
                         } else {
-                            nextTrigger = noti.trigger_time;
+                            nextTrigger = noti.trigger_time; // 상태는 유지하되, 아래 updateSentStatus에서 last_sent_min을 업데이트함
                         }
+                        
+                        // ✅ 루프를 빠져나오기 전에 last_sent_min에 현재 targetMin을 할당할 준비
+                        noti.current_min_flag = targetMin; 
                         break;
                     }
                 }
@@ -286,7 +291,7 @@ export const checkAndSendNotifications = async () => {
                 // 상태 업데이트 (nextTrigger가 있으면 업데이트, 없으면 완료 처리)
                 await notiRepo.updateSentStatus(noti.notification_id, {
                     trigger_time: nextTrigger,
-                    last_sent_min: diffMin,
+                    last_sent_min: noti.current_min_flag || diffMin,
                     sent_success: nextTrigger === null ? true : false,
                     sent_at: new Date()
                 });
