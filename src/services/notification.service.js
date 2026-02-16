@@ -224,26 +224,23 @@ export const checkAndSendNotifications = async () => {
 
             if (userSetting && userSetting.enabled) {
                 const timeList = bitToTimeList(userSetting.notify_mask) || [];
-                timeList.sort((a, b) => b - a); 
-                const minTarget = Math.min(...timeList); 
+                timeList.sort((a, b) => b - a);
+                const minTarget = Math.min(...timeList);
 
                 for (const targetMin of timeList) {
-                    // ✅ 조건 보강: diffMin이 해당 구간에 들어왔고 + '방금 보낸 시간'이 아닐 때만 발송
                     if (diffMin <= targetMin && diffMin > targetMin - 1 && noti.last_sent_min !== targetMin) {
                         message = targetMin === 1 ? "지금 당장 출발하세요!" : `막차 출발 ${targetMin}분 전입니다.`;
                         shouldUpdateStatus = true;
-
-                        // ✅ 현재 보낸 분(min)을 기록해서 중복 발송 방지
-                        const currentSentMin = targetMin; 
+                        
+                        // 중복 발송 방지를 위해 현재 보낸 분(min) 기록
+                        noti.current_min_flag = targetMin; 
 
                         if (targetMin === minTarget) {
-                            nextTrigger = null; 
+                            nextTrigger = null; // 마지막 알림이면 종료
                         } else {
-                            nextTrigger = noti.trigger_time; // 상태는 유지하되, 아래 updateSentStatus에서 last_sent_min을 업데이트함
+                            // 상태 값에 변화를 주어 무한 루프 방지 (임의의 단계값 부여 가능)
+                            nextTrigger = `SENT_CUSTOM_${targetMin}`; 
                         }
-                        
-                        // ✅ 루프를 빠져나오기 전에 last_sent_min에 현재 targetMin을 할당할 준비
-                        noti.current_min_flag = targetMin; 
                         break;
                     }
                 }
@@ -267,7 +264,6 @@ export const checkAndSendNotifications = async () => {
                     nextTrigger = 'SENT_NOW'; 
                     shouldUpdateStatus = true;
                 } 
-                // ✅ 이 부분이 else 블록 안에 정확히 있어야 합니다!
                 else if (noti.trigger_time === 'SENT_NOW' && diffMin <= 1) {
                     message = "지금 당장 출발하세요! 막차가 곧 출발합니다.";
                     nextTrigger = null; 
@@ -279,13 +275,14 @@ export const checkAndSendNotifications = async () => {
             if (shouldUpdateStatus && message) {
                 const userPhone = noti.user?.phone_number;
 
-                console.log(`[Notification Send] 🔔 ID: ${noti.notification_id} | User: ${noti.user_id} | Msg: ${message} | Time: ${new Date().toLocaleString()}`);
-
-                if (userPhone) {
-                    await sendSMS(userPhone, message);
-                    console.log(`[SMS Success] ✅ To: ${userPhone} | Msg: ${message}`);
-                } else {
-                    console.warn(`[SMS skip] 유저번호 없음: ${noti.user_id}`);
+                // try-catch로 감싸서 SMS 실패가 전체를 멈추지 않게 함
+                try {
+                    if (userPhone) {
+                        await sendSMS(userPhone, message);
+                        console.log(`[SMS Success] ID: ${noti.notification_id} | To: ${userPhone}`);
+                    }
+                } catch (smsErr) {
+                    console.error(`[SMS Fail] ID: ${noti.notification_id} | 에러: ${smsErr.message}`);
                 }
                 
                 // 상태 업데이트 (nextTrigger가 있으면 업데이트, 없으면 완료 처리)
