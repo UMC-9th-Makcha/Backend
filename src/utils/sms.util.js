@@ -15,7 +15,7 @@ const sendVerificationSMS = async (phoneNumber, code) => {
         message: {
           to: phoneNumber,
           from: process.env.SOLAPI_SENDER,
-          text: `[Makcha] ${code}`,
+          text: code,
         },
       },
       {

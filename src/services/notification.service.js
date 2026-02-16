@@ -4,6 +4,7 @@ import smsUtil, { sendSMS } from "../utils/sms.util.js";
 import { getRouteToken, deleteRouteToken } from "../utils/routeTokenStore.util.js";
 import { recordRecentDestination } from "./recentDestination.service.js"; // 경로 확인!
 import prisma from '../database/prisma.js'
+import { time } from "console";
 
 export const registerNotification = async (userId, cacheKey, alert_time) => {
     const cachedData = await getRouteToken(cacheKey);
@@ -197,7 +198,7 @@ export const checkAndSendNotifications = async () => {
     try {
         // 1. 아직 발송 완료되지 않은(sent_success: false) 알림들 조회
         notifications = await notiRepo.findPendingNotifications(currentTime);
-        // const notifications = await notiRepo.findPendingNotifications(currentTime);
+        console.log(`[Batch] ${currentTime.toISOString()} | 알림 대기열 개수: ${notifications.length}`);
     } catch (error) {
         throw new CustomError(
             "COM-500-001",
@@ -223,15 +224,17 @@ export const checkAndSendNotifications = async () => {
 
             if (userSetting && userSetting.enabled) {
                 // 설정된 시간 리스트 (예: [30, 10, 3])
-                const timeList = bitToTimeList(userSetting.notify_mask);
+                const timeList = bitToTimeList(userSetting.notify_mask) || [];
                 
-                for (const targetMin of timeList) {
-                    // 현재 시간이 설정값보다 작거나 같고, 아직 이 타임에 안 보냈다면
-                    if (diffMin <= targetMin && diffMin > targetMin - 1 && noti.last_sent_min !== targetMin) {
-                        message = `막차 출발 ${targetMin}분 전입니다.`;
-                        shouldUpdateStatus = true;
-                        nextTrigger = noti.trigger_time; // 커스텀 모드에선 트리거 순서 무의미하므로 유지
-                        break;
+                if (timeList.length > 0) {
+                    for (const targetMin of timeList) {
+                        // 현재 시간이 설정값보다 작거나 같고, 아직 이 타임에 안 보냈다면
+                        if (diffMin <= targetMin && diffMin > targetMin - 1 && noti.last_sent_min !== targetMin) {
+                            message = `막차 출발 ${targetMin}분 전입니다.`;
+                            shouldUpdateStatus = true;
+                            nextTrigger = noti.trigger_time; // 커스텀 모드에선 트리거 순서 무의미하므로 유지
+                            break;
+                        }
                     }
                 }
             }
