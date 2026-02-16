@@ -76,9 +76,15 @@ export const findPendingNotifications = async (currentTime) => {
 
 // 발송 상태 업데이트
 export const updateSentStatus = async (notification_id, data) => {
+    const updateData = { ...data };
+
+    if (updateData.trigger_time === null) {
+        delete updateData.trigger_time;
+    }
+
     return await prisma.notificationTrigger.update({
         where: { notification_id: BigInt(notification_id) },
-        data: data
+        data: updateData
     });
 };
 
