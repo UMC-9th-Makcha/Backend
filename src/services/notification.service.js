@@ -258,8 +258,8 @@ export const checkAndSendNotifications = async () => {
                     shouldUpdateStatus = true;
                 }
 
-                else if (noti.trigger_time === 'SENT_NOW' && diffMin <= 0) {
-                    message = "지금 당장 출발하세요! 계산된 막차 탑승 마지노선입니다.";
+                else if (noti.trigger_time === 'SENT_NOW' && diffMin <= 1) {
+                    message = "지금 당장 출발하세요! 막차가 곧 출발합니다.";
                     nextTrigger = null; // 알림 종료
                     shouldUpdateStatus = true;
                 }
