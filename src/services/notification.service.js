@@ -215,6 +215,8 @@ export const checkAndSendNotifications = async () => {
             const diffMs = noti.scheduled.getTime() - currentTime.getTime();
             const diffMin = Math.floor(diffMs / 60000);
 
+            if (noti.last_sent_min === diffMin) continue;
+
             let message = "";
             let shouldUpdateStatus = false;
             let nextTrigger = noti.trigger_time;
@@ -239,7 +241,7 @@ export const checkAndSendNotifications = async () => {
                             nextTrigger = null; // 마지막 알림이면 종료
                         } else {
                             // 상태 값에 변화를 주어 무한 루프 방지 (임의의 단계값 부여 가능)
-                            nextTrigger = `SENT_CUSTOM_${targetMin}`; 
+                            nextTrigger = noti.trigger_time;
                         }
                         break;
                     }
@@ -288,7 +290,7 @@ export const checkAndSendNotifications = async () => {
                 // 상태 업데이트 (nextTrigger가 있으면 업데이트, 없으면 완료 처리)
                 await notiRepo.updateSentStatus(noti.notification_id, {
                     trigger_time: nextTrigger,
-                    last_sent_min: noti.current_min_flag || diffMin,
+                    last_sent_min: diffMin,
                     sent_success: nextTrigger === null ? true : false,
                     sent_at: new Date()
                 });
