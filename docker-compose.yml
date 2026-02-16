@@ -36,6 +36,8 @@ services:
     restart: always
     env_file:
       - .env
+    environment:
+      TZ: Asia/Seoul
     ports:
       - "3000:3000"
     depends_on:
