@@ -256,16 +256,13 @@ export const checkAndSendNotifications = async () => {
                     message = "막차 출발 3분 전입니다.";
                     nextTrigger = 'SENT_NOW';
                     shouldUpdateStatus = true;
-                } 
-            }
+                }
 
-                if (noti.trigger_time === 'SENT_NOW' && diffMin <= 0) {
-                // 15분 전부터 '실시간 모니터링' 상태라고 가정
-                if (diffMin <= 0) { // Deadline(나갈 시간)이 되었거나 지났을 때
+                else if (noti.trigger_time === 'SENT_NOW' && diffMin <= 0) {
                     message = "지금 당장 출발하세요! 계산된 막차 탑승 마지노선입니다.";
                     nextTrigger = null; // 알림 종료
                     shouldUpdateStatus = true;
-            }
+                }
             }
 
             // 3. 메시지가 결정되었다면 문자 발송 및 DB 업데이트
