@@ -69,7 +69,9 @@ export const findPendingNotifications = async (currentTime) => {
         include: {
             user: {
                 include: { notificationSettings: true }
-            }
+            },
+            routeSearch: true,
+            station: true    
         }
     });
 };
