@@ -173,7 +173,7 @@ model NotificationTrigger {
   user_id         BigInt
   station_id      BigInt
   phone_number    String
-  trigger_time    TriggerTime
+  trigger_time    TriggerTime?
   sent_success    Boolean
   sent_at         DateTime?
   scheduled       DateTime?

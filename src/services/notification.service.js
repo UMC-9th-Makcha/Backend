@@ -215,13 +215,15 @@ export const checkAndSendNotifications = async () => {
             const diffMs = noti.scheduled.getTime() - currentTime.getTime();
             const diffMin = Math.floor(diffMs / 60000);
 
-            if (noti.last_sent_min === diffMin) continue;
+            if (noti.sent_success) continue;
 
             let message = "";
             let shouldUpdateStatus = false;
             let nextTrigger = noti.trigger_time;
+            let sentMin = null
 
             // 마이페이지에서 설정한 경우 (커스텀모드)
+
             const userSetting = noti.user.notificationSettings;
 
             if (userSetting && userSetting.enabled) {
@@ -233,9 +235,7 @@ export const checkAndSendNotifications = async () => {
                     if (diffMin <= targetMin && diffMin > targetMin - 1 && noti.last_sent_min !== targetMin) {
                         message = targetMin === 1 ? "지금 당장 출발하세요!" : `막차 출발 ${targetMin}분 전입니다.`;
                         shouldUpdateStatus = true;
-                        
-                        // 중복 발송 방지를 위해 현재 보낸 분(min) 기록
-                        noti.current_min_flag = targetMin; 
+                        sentMin = targetMin;
 
                         if (targetMin === minTarget) {
                             nextTrigger = null; // 마지막 알림이면 종료
@@ -251,22 +251,22 @@ export const checkAndSendNotifications = async () => {
 
             // 2. 현재 trigger_time 상태에 따른 분기 처리
             else {
-                if (noti.trigger_time === 'SENT_THIRTY' && diffMin <= 30) {
+                if (noti.trigger_time === 'SENT_THIRTY' && diffMin === 30) {
                     message = "막차 출발 30분 전입니다.";
                     nextTrigger = 'SENT_TEN';
                     shouldUpdateStatus = true;
                 } 
-                else if (noti.trigger_time === 'SENT_TEN' && diffMin <= 10) {
+                else if (noti.trigger_time === 'SENT_TEN' && diffMin === 10) {
                     message = "막차 출발 10분 전입니다.";
                     nextTrigger = 'SENT_THREE';
                     shouldUpdateStatus = true;
                 } 
-                else if (noti.trigger_time === 'SENT_THREE' && diffMin <= 3) {
+                else if (noti.trigger_time === 'SENT_THREE' && diffMin === 3) {
                     message = "막차 출발 3분 전입니다.";
                     nextTrigger = 'SENT_NOW'; 
                     shouldUpdateStatus = true;
                 } 
-                else if (noti.trigger_time === 'SENT_NOW' && diffMin <= 1) {
+                else if (noti.trigger_time === 'SENT_NOW' && diffMin === 1) {
                     message = "지금 당장 출발하세요! 막차가 곧 출발합니다.";
                     nextTrigger = null; 
                     shouldUpdateStatus = true;
@@ -286,17 +286,17 @@ export const checkAndSendNotifications = async () => {
                 } catch (smsErr) {
                     console.error(`[SMS Fail] ID: ${noti.notification_id} | 에러: ${smsErr.message}`);
                 }
-                
+
                 // 상태 업데이트 (nextTrigger가 있으면 업데이트, 없으면 완료 처리)
                 await notiRepo.updateSentStatus(noti.notification_id, {
                     trigger_time: nextTrigger,
-                    last_sent_min: diffMin,
+                    last_sent_min: sentMin,
                     sent_success: nextTrigger === null ? true : false,
                     sent_at: new Date()
                 });
 
                 //최종 발송 완료인 경우 History에 기록 남기기
-                if (nextTrigger === null || message.includes("실시간")) {
+                if (nextTrigger === null) {
                     try {
                         const rs = noti.route_search; // route_search 조인 데이터
                         const snapshot = rs?.route_data || {};
@@ -575,7 +575,7 @@ export const forceCompleteNotification = async (notification_id, user_id) => {
 
         // 2. 상태 업데이트 (sent_success: true, trigger_time: null)
         await notiRepo.updateSentStatus(notification_id, {
-            trigger_time: 'SENT_NOW',
+            trigger_time: null,
             sent_success: true,
             sent_at: new Date()
         });
