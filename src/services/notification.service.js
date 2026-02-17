@@ -220,7 +220,6 @@ export const checkAndSendNotifications = async () => {
             let message = "";
             let shouldUpdateStatus = false;
             let nextTrigger = noti.trigger_time;
-            let sentMin = null
 
             // 마이페이지에서 설정한 경우 (커스텀모드)
 
@@ -232,10 +231,9 @@ export const checkAndSendNotifications = async () => {
                 const minTarget = Math.min(...timeList);
 
                 for (const targetMin of timeList) {
-                    if (diffMin <= targetMin && diffMin > targetMin - 1 && noti.last_sent_min !== targetMin) {
+                    if (diffMin <= targetMin && diffMin > targetMin - 1) {
                         message = targetMin === 1 ? "지금 당장 출발하세요!" : `막차 출발 ${targetMin}분 전입니다.`;
                         shouldUpdateStatus = true;
-                        sentMin = targetMin;
 
                         if (targetMin === minTarget) {
                             nextTrigger = null; // 마지막 알림이면 종료
@@ -290,7 +288,6 @@ export const checkAndSendNotifications = async () => {
                 // 상태 업데이트 (nextTrigger가 있으면 업데이트, 없으면 완료 처리)
                 await notiRepo.updateSentStatus(noti.notification_id, {
                     trigger_time: nextTrigger,
-                    last_sent_min: sentMin,
                     sent_success: nextTrigger === null ? true : false,
                     sent_at: new Date()
                 });
