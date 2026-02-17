@@ -295,7 +295,7 @@ export const checkAndSendNotifications = async () => {
                 //최종 발송 완료인 경우 History에 기록 남기기
                 if (nextTrigger === null) {
                     try {
-                        const rs = noti.route_search; // route_search 조인 데이터
+                        const rs = noti.routeSearch; 
                         const snapshot = rs?.route_data || {};
                         const card = snapshot.card || {};
 
@@ -323,11 +323,8 @@ export const checkAndSendNotifications = async () => {
                         });
 
                 // 세이브리포트 집계 갱신
-                    const departureDate = new Date(noti.scheduled);
-                    const monthStr = departureDate.toISOString().slice(0, 7);
-
-                    // 절약 금액 가져오기
-                    const savedFare = noti.route_search?.route_data?.taxi_fare || 0;
+                    const monthStr = new Date(noti.scheduled).toISOString().slice(0, 7); 
+                    const savedFare = noti.routeSearch?.route_data?.taxi_fare || 0;
 
                     await notiRepo.upsertSaveReport(noti.user_id, monthStr, savedFare);
                 
@@ -597,7 +594,7 @@ export const forceCompleteNotification = async (notification_id, user_id) => {
             arrival_datetime: new Date(new Date(noti.scheduled).getTime() + (card.traveled_time || 0) * 60000), // 출발+소요시간
             duration_minutes: card.traveled_time || 0,
 
-            // 3. 상세 경로 및 통계 데이터 (지연님이 쓸 것들)
+            // 3. 상세 경로 및 통계 데이터
             route_detail_json: snapshot.detail || null, // steps 정보가 든 JSON
             transfers: card.transfer_count || 0,
             walking_minutes: card.walk_time || 0,
