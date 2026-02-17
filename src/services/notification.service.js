@@ -299,6 +299,8 @@ export const checkAndSendNotifications = async () => {
                         const snapshot = rs?.route_data || {};
                         const card = snapshot.card || {};
 
+                        const taxiFare = rs?.saved_fare || snapshot.taxi_fare || card.taxi_fare || 0;
+
                         await notiRepo.createHistory({
                             user_id: noti.user_id,
                             notification_id: noti.notification_id,
@@ -319,14 +321,14 @@ export const checkAndSendNotifications = async () => {
                             walking_minutes: card.walk_time || 0,
                             
                             // 4. 절약 금액
-                            saved_fare_won: snapshot.taxi_fare || 0 
+                            saved_fare_won: taxiFare || 0 
                         });
 
                 // 세이브리포트 집계 갱신
                     const monthStr = new Date(noti.scheduled).toISOString().slice(0, 7); 
                     const savedFare = noti.routeSearch?.route_data?.taxi_fare || 0;
 
-                    await notiRepo.upsertSaveReport(noti.user_id, monthStr, savedFare);
+                    await notiRepo.upsertSaveReport(noti.user_id, monthStr, taxiFare);
                 
                     } catch (hisError) {
                         console.error("히스토리 저장 실패:", hisError);
