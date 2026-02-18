@@ -1,11 +1,12 @@
 import { WaitingPlaceResponseDto } from '../dtos/response/waitingPlace.dto.js';
 import { CustomError } from '../response/customError.js';
 import { appConfig } from '../config/app.config.js';
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
 
 class WaitingPlaceService {
-  constructor(kakaoClient, googleClient, distanceUtil, timeUtil) {
+  constructor(kakaoClient, distanceUtil, timeUtil) {
     this.kakaoClient = kakaoClient;
-    this.googleClient = googleClient; //추가함(대표 사진, 영업 시간)
     this.distanceUtil = distanceUtil;
     this.timeUtil = timeUtil;
   }
@@ -172,31 +173,22 @@ class WaitingPlaceService {
         };
       }
 
-      // Google API 호출 추가 - 목록에서도 사진/영업시간 표시
+      // -DB 영업사진, 시간 저장 => 불러오기
       const enrichedPlaces = await Promise.all(
         sortedPlaces.map(async (place) => {
           const recommendReason = this._generateRecommendReason(place, currentTime);
           
-          // Google API로 사진/영업시간 가져오기
-          let googleData = null;
-          try {
-            googleData = await this.googleClient.findPlaceByLocation({
-              lat: place.lat,
-              lng: place.lng
-            });
-          } catch (error) {
-            console.warn(`[Google] Failed for ${place.name}:`, error.message);
-          }
+          // 추가: DB에서 메타 조회
+          const meta = await this._getPlaceMeta(place.name);
           
           return new WaitingPlaceResponseDto(
             { 
               ...place, 
               recommendReason,
-              thumbnailUrl: googleData?.photoReference
-                ? `${appConfig.baseUrl}/api/google-photo?ref=${encodeURIComponent(googleData.photoReference)}`
-                : null,
-              operatingHours: googleData?.operatingHours ?? this._formatOperatingHours(place),
-              isCurrentlyOpen: googleData?.isCurrentlyOpen ?? this._isCurrentlyOpen(place, currentTime)
+              // googleData → meta
+              thumbnailUrl: meta?.imageUrl ?? null, 
+              operatingHours: meta?.operatingHours ?? this._formatOperatingHours(place),
+              isCurrentlyOpen: meta?.is24Hours ?? this._isCurrentlyOpen(place, currentTime)
             },
             place.distance,
             currentTime
@@ -265,20 +257,8 @@ class WaitingPlaceService {
 
       const currentTime = new Date();
 
-      const googleData = await this.googleClient.findPlaceByLocation({
-        lat: place.lat,
-        lng: place.lng //대표 사진, 영업 시간
-      });
-
-      // Google 응답 디버깅
-      console.log('================ GOOGLE DEBUG ================');
-      console.log('[GOOGLE RAW DATA]', googleData);
-      console.log('[GOOGLE photoReference]', googleData?.photoReference);
-      console.log('[GOOGLE operatingHours]', googleData?.operatingHours);
-      console.log('[GOOGLE isCurrentlyOpen]', googleData?.isCurrentlyOpen);
-      console.log('==============================================');
-
-      
+      // DB에서 메타 조회
+      const meta = await this._getPlaceMeta(place.name);
 
       const recommendReason = this._generateRecommendReason(place, currentTime);
       const kakaoMapUrl = this._generateKakaoMapDeepLink(place);
@@ -305,16 +285,10 @@ class WaitingPlaceService {
           { 
             ...place, 
             recommendReason,
-            //thumbnailUrl: null,  // 카카오 API는 이미지 미제공
-            thumbnailUrl: googleData?.photoReference
-              ? `${appConfig.baseUrl}/api/google-photo?ref=${encodeURIComponent(googleData.photoReference)}`
-              : null,
-            //operatingHours: this._formatOperatingHours(place),
-            operatingHours:
-            googleData?.operatingHours ?? this._formatOperatingHours(place),  
-            isCurrentlyOpen:
-              googleData?.isCurrentlyOpen ?? this._isCurrentlyOpen(place)
-            //isCurrentlyOpen: this._isCurrentlyOpen(place, currentTime) 
+            //  googleData → meta
+            thumbnailUrl: meta?.imageUrl ?? null,
+            operatingHours: meta?.operatingHours ?? this._formatOperatingHours(place),
+            isCurrentlyOpen: meta?.is24Hours ?? this._isCurrentlyOpen(place, currentTime)
           },
           Math.round(distance),  // 0 → 실제 거리
           currentTime
@@ -545,6 +519,26 @@ class WaitingPlaceService {
         return sorted.sort((a, b) => a.distance - b.distance);
     }
   }
+
+  async _getPlaceMeta(placeName) {
+    try {
+      let meta = await prisma.waitingPlaceMeta.findUnique({
+        where: { name: placeName }
+      });
+      if (!meta) {
+        meta = await prisma.waitingPlaceMeta.findFirst({
+          where: { name: { contains: placeName } }
+        });
+      }
+      console.log('[DB MATCH]', placeName, '->', meta ? '✅ found' : '❌ not found');
+      return meta;
+    } catch (e) {
+      console.warn(`[DB] 조회 실패: ${placeName}`, e.message);
+      return null;
+    }
+  }
 }
+
+
 
 export default WaitingPlaceService;
