@@ -3,14 +3,13 @@ import WaitingPlaceController from '../controllers/waitingPlace.controller.js';
 import WaitingPlaceService from '../services/waitingPlace.service.js';
 import KakaoMapClient from '../clients/kakaoMap.client.js';
 import { DistanceUtil } from '../utils/distance.util.js';
-import GooglePlacesClient from '../clients/googleClient.js';
+
 
 
 // 의존성 주입
 const kakaoClient = new KakaoMapClient();
-const googleClient = new GooglePlacesClient(process.env.GOOGLE_PLACES_API_KEY);
 const distanceUtil = new DistanceUtil();
-const waitingPlaceService = new WaitingPlaceService(kakaoClient,googleClient, distanceUtil, null);  // timeUtil은 실제로 사용 안 함
+const waitingPlaceService = new WaitingPlaceService(kakaoClient, distanceUtil, null);
 const waitingPlaceController = new WaitingPlaceController(waitingPlaceService);
 
 const router = express.Router();
