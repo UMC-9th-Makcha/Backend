@@ -34,6 +34,8 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
+app.use('/images', express.static('public/images'));
+
 // CORS - 개발/운영 모두 허용으로 수정
 const allowedOrigins = [
   // Swagger / API 서버

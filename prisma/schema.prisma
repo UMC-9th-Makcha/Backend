@@ -231,3 +231,14 @@ model NotificationHistory {
 
   @@index([user_id, departure_datetime(sort: Desc)], name: "idx_nh_user_depart")
 }
+
+model WaitingPlaceMeta {
+  id             Int      @id @default(autoincrement())
+  name           String   @unique
+  category       String
+  imageUrl       String?       // thumbnailUrl → imageUrl
+  operatingHours String?  @db.Text
+  is24Hours      Boolean  @default(false)  // isOpen24Hours → is24Hours
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
