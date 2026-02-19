@@ -114,6 +114,9 @@ class KakaoMapClient {
   }
 
   async getCarDirections({ origin, destination }) {
+
+    console.log("🔥 RAW RESPONSE:", JSON.stringify(response.data, null, 2));
+    
     try {
       const response = await this.axiosInstance.get(
         this.config.baseURL.directions,
