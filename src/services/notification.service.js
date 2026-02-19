@@ -4,7 +4,13 @@ import smsUtil, { sendSMS } from "../utils/sms.util.js";
 import { getRouteToken, deleteRouteToken } from "../utils/routeTokenStore.util.js";
 import { recordRecentDestination } from "./recentDestination.service.js"; // 경로 확인!
 import prisma from '../database/prisma.js'
-import { time } from "console";
+import TaxiService from '../services/taxi.service.js';
+import KakaoMapClient from "../clients/kakaoMap.client.js";
+import { DistanceUtil } from "../utils/distance.util.js";
+import { TaxiFareEstimateDto } from '../dtos/response/taxiFareEstimate.dto.js';
+
+const distanceUtil = new DistanceUtil();
+const taxiService = new TaxiService(KakaoMapClient, distanceUtil);
 
 export const registerNotification = async (userId, cacheKey, alert_time) => {
     const cachedData = await getRouteToken(cacheKey);
@@ -19,6 +25,33 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
     }
 
     const { snapshot } = cachedData;
+
+    let calculatedFare = 0;
+
+    // 택시비 직접 계산 로직
+    try {
+        const rawDeadline = snapshot.card?.deadline_at;
+
+        const fareDto = new TaxiFareEstimateDto({
+            from: { lat: snapshot.origin.lat, lng: snapshot.origin.lng },
+            to: { lat: snapshot.destination.lat, lng: snapshot.destination.lng },
+            taxiType: 'REGULAR',
+            departureTime: rawDeadline ? new Date(rawDeadline) : new Date()
+        });
+
+        if (fareDto.isValid()) {
+            const taxiFareResult = await taxiService.estimateFare(fareDto);
+            calculatedFare = taxiFareResult.estimatedFare?.total || taxiFareResult.estimatedFare || 0;
+            console.log(`✅ 택시비 계산 성공: ${calculatedFare}원`);
+        } else {
+            console.warn("⚠️ DTO 유효성 검사 실패:", fareDto.validate());
+            calculatedFare = snapshot.taxi_fare || 0;
+        }
+    } catch (error) {
+        console.error("❌ 택시비 계산 실패:", error.message);
+        calculatedFare = snapshot.taxi_fare || 0; 
+    }
+
     const origin = snapshot.origin;
     const snapDest = snapshot.destination;
 
@@ -45,6 +78,7 @@ export const registerNotification = async (userId, cacheKey, alert_time) => {
             route_token: snapshot.route_token || cacheKey,
             route_data: snapshot,
             is_optimal: snapshot.is_optimal || false,
+            saved_fare: calculatedFare
         }
     })
 
@@ -294,6 +328,9 @@ export const checkAndSendNotifications = async () => {
 
                 //최종 발송 완료인 경우 History에 기록 남기기
                 if (nextTrigger === null) {
+
+                    console.log("SNAPSHOT FULL:", JSON.stringify(snapshot, null, 2));
+
                     try {
                         const rs = noti.routeSearch; 
                         const snapshot = rs?.route_data || {};
@@ -321,7 +358,7 @@ export const checkAndSendNotifications = async () => {
                             walking_minutes: card.walk_time || 0,
                             
                             // 4. 절약 금액
-                            saved_fare_won: taxiFare || 0 
+                            saved_fare_won: taxiFare
                         });
 
                 // 세이브리포트 집계 갱신
@@ -497,6 +534,7 @@ export const getNotificationDetail = async (notification_id) => {
 
         route_id: rs?.route_id ? String(rs.route_id) : (noti.route_search_id ? String(noti.route_search_id) : null),
         route_token: rs?.route_token || null,
+        saved_fare_won: rs?.saved_fare || card.taxi_fare || 0,
         
         // 캐시된 snapshot 데이터 그대로 전달
         steps: snapshot.detail?.steps || [] 
@@ -542,7 +580,7 @@ export const getHistoryDetail = async (notification_history_id) => {
     };
 };
 
-// 알림 강제 완료 처리 (테스트용)
+// 알림 강제 완료 처리 (최종 수정본)
 export const forceCompleteNotification = async (notification_id, user_id) => {
     const noti = await notiRepo.getNotificationWithRoute(notification_id);
 
@@ -561,56 +599,85 @@ export const forceCompleteNotification = async (notification_id, user_id) => {
             "/api/alerts/force-complete");
     }
 
+    const rs = noti.routeSearch; 
+    const snapshot = rs?.route_data || {};
+    const card = snapshot.card || {};
+
+    // 1. 택시비 계산용 변수 선언 (통일된 이름: calculatedFare)
+    let calculatedFare = 0;
+
+    // 2. 택시비 직접 계산 로직
     try {
-        // 1. 즉시 완료 문자 발송
+        const rawDeadline = snapshot.card?.deadline_at;
+
+        const fareDto = new TaxiFareEstimateDto({
+            from: { lat: snapshot.origin.lat, lng: snapshot.origin.lng },
+            to: { lat: snapshot.destination.lat, lng: snapshot.destination.lng },
+            taxiType: 'REGULAR',
+            departureTime: rawDeadline ? new Date(rawDeadline) : new Date()
+        });
+
+        if (fareDto.isValid()) {
+            const taxiFareResult = await taxiService.estimateFare(fareDto);
+            // API 응답 구조에 따라 total이 있으면 사용, 없으면 값 그대로 사용
+            calculatedFare = taxiFareResult.estimatedFare?.total || taxiFareResult.estimatedFare || 0;
+            console.log(`✅ 택시비 계산 성공: ${calculatedFare}원`);
+        } else {
+            console.warn("⚠️ DTO 유효성 검사 실패:", fareDto.validate());
+            calculatedFare = snapshot.taxi_fare || 0;
+        }
+    } catch (error) {
+        console.error("❌ 택시비 계산 실패:", error.message);
+        calculatedFare = snapshot.taxi_fare || 0; 
+    }
+
+    try {
+        // 3. 즉시 완료 문자 발송
         const userPhone = noti.user?.phone_number;
         const message = "[테스트] 막차 탑승 성공! 알림이 강제 완료되었습니다.";
         if (userPhone) {
-            await sendSMS(userPhone, message);
+            try {
+                await sendSMS(userPhone, message);
+            } catch (e) {
+                console.error("SMS 발송 실패:", e.message);
+            }
         }
 
-        // 2. 상태 업데이트 (sent_success: true, trigger_time: null)
+        // 4. 상태 업데이트
         await notiRepo.updateSentStatus(notification_id, {
             trigger_time: null,
             sent_success: true,
             sent_at: new Date()
         });
 
-        const rs = noti.routeSearch; // Prisma include로 가져온 경로 정보
-        const snapshot = rs?.route_data || {};
-        const card = snapshot.card || {};
-
-        // 3. 히스토리 기록 생성
+        // 5. 히스토리 기록 생성
         await notiRepo.createHistory({
             user_id: noti.user_id,
             notification_id: noti.notification_id,
             route_id: noti.route_id,
 
-            // 1. 역/장소 명칭 및 ID
             origin_name: noti.station?.station_name || "알 수 없음",
             origin_station_id: noti.station_id,
             destination_name: noti.title || "알 수 없는 목적지",
 
-            // 2. 시간 및 소요 시간 계산
-            scheduled: noti.scheduled, // 출발 시간 (departure_datetime)
-            arrival_datetime: new Date(new Date(noti.scheduled).getTime() + (card.traveled_time || 0) * 60000), // 출발+소요시간
+            scheduled: noti.scheduled,
+            arrival_datetime: new Date(new Date(noti.scheduled).getTime() + (card.traveled_time || 0) * 60000),
             duration_minutes: card.traveled_time || 0,
 
-            // 3. 상세 경로 및 통계 데이터
-            route_detail_json: snapshot.detail || null, // steps 정보가 든 JSON
+            route_detail_json: snapshot.detail || null,
             transfers: card.transfer_count || 0,
             walking_minutes: card.walk_time || 0,
             
-            // 4. 세이브 리포트용 금액
-            saved_fare_won: snapshot.taxi_fare || 0 
+            // ✅ 위에서 계산한 변수 주입
+            saved_fare_won: calculatedFare 
         });
 
-        // 4. 세이브 리포트 갱신
+        // 6. 세이브 리포트 갱신
         const monthStr = new Date(noti.scheduled).toISOString().slice(0, 7);
-        const savedFare = noti.routeSearch?.route_data?.taxi_fare || 0;
-        await notiRepo.upsertSaveReport(noti.user_id, monthStr, savedFare);
+        // ✅ snapshot.taxi_fare(0원일 확률 높음) 대신, 방금 구한 calculatedFare를 직접 전달
+        await notiRepo.upsertSaveReport(noti.user_id, monthStr, calculatedFare);
 
-        return { success: true, message: "강제 완료 처리 성공" };
+        return { success: true, message: "강제 완료 처리 성공", fare: calculatedFare };
     } catch (error) {
         console.error("강제 완료 중 오류:", error);
         throw error;

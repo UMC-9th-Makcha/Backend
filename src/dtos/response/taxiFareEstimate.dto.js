@@ -12,6 +12,7 @@ export class TaxiFareEstimateDto {
       lng: parseFloat(data.to?.lng)
     };
     this.taxiType = data.taxiType || 'REGULAR';
+    this.departureTime = data.departureTime ? new Date(data.departureTime) : new Date();
   }
 
   /**
