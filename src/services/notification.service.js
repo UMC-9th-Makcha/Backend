@@ -336,7 +336,31 @@ export const checkAndSendNotifications = async () => {
                         const snapshot = rs?.route_data || {};
                         const card = snapshot.card || {};
 
-                        const taxiFare = rs?.saved_fare || snapshot.taxi_fare || card.taxi_fare || 0;
+                        let calculatedFare = 0;
+
+                        // 택시비 직접 계산 로직
+                        try {
+                            const rawDeadline = snapshot.card?.deadline_at;
+
+                            const fareDto = new TaxiFareEstimateDto({
+                                from: { lat: snapshot.origin.lat, lng: snapshot.origin.lng },
+                                to: { lat: snapshot.destination.lat, lng: snapshot.destination.lng },
+                                taxiType: 'REGULAR',
+                                departureTime: rawDeadline ? new Date(rawDeadline) : new Date()
+                            });
+
+                            if (fareDto.isValid()) {
+                                const taxiFareResult = await taxiService.estimateFare(fareDto);
+                                calculatedFare = taxiFareResult.estimatedFare?.total || taxiFareResult.estimatedFare || 0;
+                                console.log(`✅ 택시비 계산 성공: ${calculatedFare}원`);
+                            } else {
+                                console.warn("⚠️ DTO 유효성 검사 실패:", fareDto.validate());
+                                calculatedFare = snapshot.taxi_fare || 0;
+                            }
+                        } catch (error) {
+                            console.error("❌ 택시비 계산 실패:", error.message);
+                            calculatedFare = snapshot.taxi_fare || 0; 
+                        }
 
                         await notiRepo.createHistory({
                             user_id: noti.user_id,
@@ -358,14 +382,12 @@ export const checkAndSendNotifications = async () => {
                             walking_minutes: card.walk_time || 0,
                             
                             // 4. 절약 금액
-                            saved_fare_won: taxiFare
+                            saved_fare_won: calculatedFare
                         });
 
                 // 세이브리포트 집계 갱신
                     const monthStr = new Date(noti.scheduled).toISOString().slice(0, 7); 
-                    const savedFare = noti.routeSearch?.route_data?.taxi_fare || 0;
-
-                    await notiRepo.upsertSaveReport(noti.user_id, monthStr, taxiFare);
+                    await notiRepo.upsertSaveReport(noti.user_id, monthStr, calculatedFare);
                 
                     } catch (hisError) {
                         console.error("히스토리 저장 실패:", hisError);
